@@ -56,7 +56,7 @@ handover:
   auto_close_hours: 6   # dormant this long -> session auto-closes as idle_timeout
 
 roster:
-  - { name: "Tim de Wet", initials: "TdW", email: "timdewet@gmail.com" }
+  - { name: "Jane Doe", initials: "JD", email: "jane.doe@example.org" }
   # - { name: "...", initials: "...", email: "..." }
 
 # Omit `checklist:` to use the built-in default (recommended start).
