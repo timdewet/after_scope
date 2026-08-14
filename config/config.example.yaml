@@ -13,10 +13,12 @@ zen:
   process_names: ["Zen.exe"]
   poll_seconds: 3
 
-# Every place users might save acquisitions. _legacy is deliberately NOT here.
+# Best practice: ONE working directory users save into during sessions; the
+# end-of-session wizard files everything into the Dropbox tree from there.
+# Saving directly into a personal Dropbox folder stays possible but is outside
+# AfterScope — uncatalogued by design. Add more dirs only as a transition aid.
 watch_dirs:
-  - { path: 'D:\ScratchData', recursive: true }
-  - { path: 'C:\Users\Public\Dropbox (MMRU)\MicroscopeData\_inbox', recursive: true }
+  - { path: 'D:\MicroscopyWorking', recursive: true }
 
 scan:
   seconds: 60
