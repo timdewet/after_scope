@@ -80,7 +80,8 @@ def resolve_config_path(cli_arg: str | None) -> Path:
         return Path(env).expanduser()
     pointer = default_data_dir() / "config.path"
     if pointer.exists():
-        target = pointer.read_text(encoding="utf-8").strip().splitlines()[0]
+        # utf-8-sig: tolerate a BOM (PowerShell 5.1's `-Encoding UTF8` writes one)
+        target = pointer.read_text(encoding="utf-8-sig").strip().splitlines()[0]
         if target:
             return Path(target).expanduser()
     return default_data_dir() / "config.yaml"
