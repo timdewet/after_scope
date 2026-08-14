@@ -74,6 +74,7 @@ tray:
 
 ui:
   mode: dimmed          # dimmed | fullscreen | windowed — how the wizard appears
+  theme: light          # light | dark | auto — auto follows the OS colour scheme
 
 # Local state (DB, logs, thumbnails). Default C:\ProgramData\AfterScope is right
 # for the scope PC — do not point this into Dropbox.

@@ -161,7 +161,7 @@ def run_toast(ctx: AppContext, session_id: int, file_ids: list[int]) -> int:
     from .ui.theme import apply_theme
 
     app = QApplication.instance() or QApplication(sys.argv[:1])
-    apply_theme(app)
+    apply_theme(app, mode=ctx.config.ui.theme)
     toast = AnnotateToast(ctx, session_id, file_ids, ctx.config.annotate.timeout_seconds)
     toast.destroyed.connect(app.quit)
     toast.show_in_corner()

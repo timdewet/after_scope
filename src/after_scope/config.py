@@ -131,12 +131,21 @@ class UiCfg(BaseModel):
     # `kiosk` is the legacy switch: honoured only when `mode` is unset.
     kiosk: bool = True
     mode: str | None = None
+    # light | dark | auto — auto follows the OS colour scheme
+    theme: str = "auto"
 
     @field_validator("mode")
     @classmethod
     def _known_mode(cls, v: str | None) -> str | None:
         if v is not None and v not in ("dimmed", "fullscreen", "windowed"):
             raise ValueError("ui.mode must be dimmed, fullscreen or windowed")
+        return v
+
+    @field_validator("theme")
+    @classmethod
+    def _known_theme(cls, v: str) -> str:
+        if v not in ("light", "dark", "auto"):
+            raise ValueError("ui.theme must be light, dark or auto")
         return v
 
     def effective_mode(self) -> str:

@@ -21,7 +21,7 @@ def run_wizard(
     from .ui.theme import apply_theme
 
     app = QApplication.instance() or QApplication(sys.argv[:1])
-    apply_theme(app)
+    apply_theme(app, mode=ctx.config.ui.theme)
 
     state = WizardState(ctx=ctx, reason=reason, session_id=session_id)
     try:
