@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ instrument }} — lab dashboard</title>
+<style>
+  :root {
+    --ink: #1d2733; --muted: #64748b; --line: #dbe3ec; --card: #ffffff;
+    --bg: #f2f5f9; --accent: #1e64b4; --ok: #2c8a4b; --warn: #b03030;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto;
+  }
+  .card h2 { font-size: 16px; margin: 0 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .warn { color: var(--warn); font-weight: 600; }
+  .muted { color: var(--muted); }
+  .bar { fill: var(--accent); opacity: .85; }
+  .bar-label, .bar-value { font-size: 12px; fill: var(--ink); }
+  .gallery { display: flex; flex-wrap: wrap; gap: 10px; }
+  .gallery figure { margin: 0; width: 110px; text-align: center; }
+  .gallery img { width: 100%; border-radius: 6px; border: 1px solid var(--line); }
+  .gallery figcaption { font-size: 11px; color: var(--muted); }
+  .stat-row { display: flex; gap: 18px; flex-wrap: wrap; }
+  .stat { text-align: center; }
+  .stat b { display: block; font-size: 26px; }
+  .stat span { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<h1>{{ instrument }}</h1>
+<div class="sub">Lab microscope dashboard · generated {{ generated_at }} by after_scope</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Now</h2>
+    {% if last_session %}
+      <p>Latest session: <b>{{ last_session.user_name or "unidentified" }}</b>
+         started {{ last_session.started_at | replace("T", " ") }}
+         {% if not last_session.ended_at %}<span class="ok">— in progress</span>
+         {% else %}(ended {{ last_session.ended_at | replace("T", " ") }},
+           {{ last_session.status }}){% endif %}</p>
+    {% else %}<p class="muted">No sessions recorded yet.</p>{% endif %}
+    {% if open_incidents %}
+      <p class="warn">⚠ {{ open_incidents | length }} open issue(s):</p>
+      <ul>
+      {% for i in open_incidents[:5] %}
+        <li>{{ i.description or i.category }} <span class="muted">({{ i.created_at[:10] }})</span></li>
+      {% endfor %}
+      </ul>
+    {% else %}<p class="ok">No open issues.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Checklist compliance</h2>
+    <div class="stat-row">
+      <div class="stat"><b>{{ sessions_total }}</b><span>sessions</span></div>
+      <div class="stat"><b class="ok">{{ compliance.complete }}</b><span>completed</span></div>
+      <div class="stat"><b class="warn">{{ compliance.skipped }}</b><span>skipped</span></div>
+      <div class="stat"><b class="warn">{{ compliance.other_incomplete }}</b><span>other incomplete</span></div>
+      <div class="stat"><b>{{ dust_sessions }}</b><span>dust refs taken</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Usage — sessions per user (last 90 days)</h2>
+    {% if usage_svg %}{{ usage_svg | safe }}{% else %}<p class="muted">No data yet.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Solvent cleaning (suggested every {{ solvent_suggest_days }} days)</h2>
+    {% if solvent %}
+    <table>
+      <tr><th>Objective</th><th>Last solvent clean</th><th>Times logged</th></tr>
+      {% for s in solvent %}
+      <tr>
+        <td>{{ s.objective }}</td>
+        <td class="{{ 'warn' if s.overdue else 'ok' }}">
+          {% if s.days_since is none %}never{% else %}{{ s.days_since }} day(s) ago{% endif %}
+        </td>
+        <td>{{ s.count }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="muted">No oil objectives seen yet.</p>{% endif %}
+    {% if maintenance %}
+    <h2 style="margin-top:14px">Recent maintenance</h2>
+    <table>
+      {% for m in maintenance[:8] %}
+      <tr><td>{{ m.created_at[:10] }}</td><td>{{ m.type }}</td>
+          <td>{{ m.objective_name or "" }}</td><td>{{ m.user_name or "" }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Dust watch — 100× brightfield references</h2>
+    {% if dust %}
+    <div class="gallery">
+      {% for d in dust %}
+      <figure>
+        {% if d.thumb %}<img src="{{ d.thumb }}" alt="dust reference {{ d.date }}">{% endif %}
+        <figcaption>{{ d.date }}<br>{{ d.objective }}</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+    {% else %}<p class="muted">No dust references yet — run the AfterScope_DustRef preset
+      before closing ZEN.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Recent incidents</h2>
+    {% if recent_incidents %}
+    <table>
+      <tr><th>Date</th><th>What</th><th>Severity</th><th>Status</th></tr>
+      {% for i in recent_incidents %}
+      <tr>
+        <td>{{ i.created_at[:10] }}</td>
+        <td>{{ i.description or i.category }}</td>
+        <td>{{ i.severity }}</td>
+        <td class="{{ 'warn' if i.status == 'open' else 'ok' }}">{{ i.status }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="muted">Nothing reported. 🎉</p>{% endif %}
+  </div>
+</div>
+</body>
+</html>

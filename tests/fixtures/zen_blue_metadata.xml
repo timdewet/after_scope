@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<ImageDocument>
+  <Metadata>
+    <Information>
+      <Image>
+        <SizeX>1936</SizeX>
+        <SizeY>1460</SizeY>
+        <SizeC>2</SizeC>
+        <SizeT>1</SizeT>
+        <AcquisitionDateAndTime>2026-08-12T13:45:12.123Z</AcquisitionDateAndTime>
+        <Dimensions>
+          <Channels>
+            <Channel Id="Channel:0" Name="TL Brightfield">
+              <ExposureTime>25000000</ExposureTime>
+              <IlluminationType>Transmitted</IlluminationType>
+              <LightSourcesSettings>
+                <LightSourceSettings>
+                  <Intensity>4.2 %</Intensity>
+                </LightSourceSettings>
+              </LightSourcesSettings>
+            </Channel>
+            <Channel Id="Channel:1" Name="EGFP">
+              <ExposureTime>150000000</ExposureTime>
+              <ExcitationWavelength>488</ExcitationWavelength>
+              <EmissionWavelength>509</EmissionWavelength>
+              <Fluor>EGFP</Fluor>
+              <IlluminationType>Epifluorescence</IlluminationType>
+              <LightSourcesSettings>
+                <LightSourceSettings>
+                  <Intensity>20 %</Intensity>
+                </LightSourceSettings>
+              </LightSourcesSettings>
+            </Channel>
+          </Channels>
+        </Dimensions>
+        <ObjectiveSettings>
+          <ObjectiveRef Id="Objective:1"/>
+        </ObjectiveSettings>
+      </Image>
+      <Instrument>
+        <Objectives>
+          <Objective Id="Objective:0" Name="EC Plan-Neofluar 10x/0.30">
+            <Immersion>Air</Immersion>
+            <LensNA>0.3</LensNA>
+            <NominalMagnification>10</NominalMagnification>
+          </Objective>
+          <Objective Id="Objective:1" Name="Plan-Apochromat 100x/1.40 Oil">
+            <Immersion>Oil</Immersion>
+            <LensNA>1.4</LensNA>
+            <NominalMagnification>100</NominalMagnification>
+          </Objective>
+        </Objectives>
+      </Instrument>
+    </Information>
+    <Scaling>
+      <Items>
+        <Distance Id="X">
+          <Value>6.5e-08</Value>
+        </Distance>
+        <Distance Id="Y">
+          <Value>6.5e-08</Value>
+        </Distance>
+      </Items>
+    </Scaling>
+  </Metadata>
+</ImageDocument>

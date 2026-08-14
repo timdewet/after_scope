@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-16"?>
+<!-- Task Scheduler definition for the AfterScope watchdog.
+     Trigger: at logon of any user, then repeat every 5 minutes indefinitely as a
+     keep-alive. MultipleInstancesPolicy=IgnoreNew means the repeat is a no-op while
+     the watchdog is already running (its single-instance mutex also guards this).
+     Registered by install.ps1; the exe path is patched in there. -->
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>AfterScope microscope session watchdog</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+      <Repetition>
+        <Interval>PT5M</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+    </LogonTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <GroupId>S-1-5-32-545</GroupId> <!-- BUILTIN\Users: runs for whoever logs on -->
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>false</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit> <!-- never kill it -->
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>C:\Program Files\AfterScope\AfterScope.exe</Command>
+      <Arguments>watchdog</Arguments>
+    </Exec>
+  </Actions>
+</Task>

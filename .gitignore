@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+*.spec.bak
+.DS_Store
+# local dev/simulate state
+sim_home/
+*.log

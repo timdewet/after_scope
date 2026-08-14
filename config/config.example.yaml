@@ -1,0 +1,78 @@
+# after_scope configuration — master copy lives in Dropbox so the lab manager can
+# edit it from any machine. The watchdog validates on load and falls back to the
+# last-known-good copy if an edit (or a half-synced file) breaks it.
+#
+# Paths may be absolute or relative to this file. '~' is expanded.
+
+instrument:
+  name: "Zeiss widefield (MMRU)"
+  machine: "SCOPE-PC"
+
+zen:
+  # Confirm with Task Manager on the scope PC; ZEN Blue is Zen.exe on 2.x/3.x.
+  process_names: ["Zen.exe"]
+  poll_seconds: 3
+
+# Every place users might save acquisitions. _legacy is deliberately NOT here.
+watch_dirs:
+  - { path: 'D:\ScratchData', recursive: true }
+  - { path: 'C:\Users\Public\Dropbox (MMRU)\MicroscopeData\_inbox', recursive: true }
+
+scan:
+  seconds: 60
+  file_patterns: ["*.czi"]
+
+organize:
+  mode: move            # move | copy | index_only
+  filename_template: "{date}_{initials}_{experiment}_{strain}_{condition}_{seq:03d}"
+  dest_template: "{dropbox_root}/MicroscopeData/{year}/{initials}/{date}_{experiment}"
+  max_path_length: 240
+
+dropbox:
+  root: 'C:\Users\Public\Dropbox (MMRU)'   # AfterScope/ (exports, dashboard, backups) is created inside
+
+dust:
+  required: prompt      # prompt | required | off
+  filename_prefix: "dustref"
+  preset_hint: "AfterScope_DustRef"        # create this preset in ZEN: 100x, brightfield
+  objective: "100x"
+  modality: "brightfield"
+
+solvent:
+  approved_solvent: "lens cleaning solution"   # set to the lab's actual approved solvent
+  suggest_after_days: 14
+
+declare:
+  enabled: true              # ask "what are you imaging today?" at ZEN start (skippable)
+  create_scratch_dir: true   # pre-create D:\ScratchData\20260814_TdW_experiment\ to save into
+  # scratch_root: 'D:\ScratchData'   # default: the first watch_dir
+
+annotate:
+  mode: toast                # toast | off — corner notification when a new CZI lands
+  timeout_seconds: 15        # auto-dismiss (declared defaults already applied)
+
+handover:
+  idle_minutes: 45      # no input AND no new files -> session dormant
+  auto_close_hours: 6   # dormant this long -> session auto-closes as idle_timeout
+
+roster:
+  - { name: "Tim de Wet", initials: "TdW", email: "timdewet@gmail.com" }
+  # - { name: "...", initials: "...", email: "..." }
+
+# Omit `checklist:` to use the built-in default (recommended start).
+# To customize, copy the items from src/after_scope/checklist/defaults.py and edit.
+
+enforcement:
+  allow_skip: true
+  skip_requires_reason: true
+  nag_at_next_start: true
+
+tray:
+  enabled: true
+
+ui:
+  kiosk: true           # fullscreen/topmost wizard on the scope PC
+
+# Local state (DB, logs, thumbnails). Default C:\ProgramData\AfterScope is right
+# for the scope PC — do not point this into Dropbox.
+# data_dir: 'C:\ProgramData\AfterScope'
