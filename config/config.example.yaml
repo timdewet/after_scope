@@ -71,7 +71,7 @@ tray:
   enabled: true
 
 ui:
-  kiosk: true           # fullscreen/topmost wizard on the scope PC
+  mode: dimmed          # dimmed | fullscreen | windowed — how the wizard appears
 
 # Local state (DB, logs, thumbnails). Default C:\ProgramData\AfterScope is right
 # for the scope PC — do not point this into Dropbox.

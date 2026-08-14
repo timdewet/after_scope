@@ -295,4 +295,7 @@ QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
 
 /* -- dialogs ---------------------------------------------------------------- */
 QDialog {{ background: {p.bg}; }}
+
+/* frameless centered wizard (ui.mode: dimmed) gets a visible edge */
+QWidget#wizardSurface {{ border: 1px solid {p.border_strong}; }}
 """

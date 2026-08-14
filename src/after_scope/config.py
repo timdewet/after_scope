@@ -124,8 +124,25 @@ class TrayCfg(BaseModel):
 
 
 class UiCfg(BaseModel):
-    # Fullscreen/topmost kiosk styling on the scope PC; windowed during dev.
+    # How the wizard presents:
+    #   dimmed     centered frameless window over a dimmed backdrop (scope PC default)
+    #   fullscreen frameless fullscreen takeover (the original kiosk look)
+    #   windowed   plain resizable window (dev)
+    # `kiosk` is the legacy switch: honoured only when `mode` is unset.
     kiosk: bool = True
+    mode: str | None = None
+
+    @field_validator("mode")
+    @classmethod
+    def _known_mode(cls, v: str | None) -> str | None:
+        if v is not None and v not in ("dimmed", "fullscreen", "windowed"):
+            raise ValueError("ui.mode must be dimmed, fullscreen or windowed")
+        return v
+
+    def effective_mode(self) -> str:
+        if self.mode is not None:
+            return self.mode
+        return "fullscreen" if self.kiosk else "windowed"
 
 
 class AppConfig(BaseModel):
