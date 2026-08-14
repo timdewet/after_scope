@@ -30,91 +30,78 @@ def run_wizard(
             window.run_auto()
             return state.exit_code
         mode = ctx.config.ui.effective_mode()
-        backdrops = []
+        host = None
         if mode == "fullscreen":
             window.setWindowFlags(
                 window.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
             )
             window.showFullScreen()
         elif mode == "dimmed":
-            backdrops = _show_backdrops(app, on_click=lambda: _refront(window))
-            if backdrops:
-                # Owned window: Windows keeps it permanently above its owner, so
-                # clicking the shade can never bury the wizard beneath it.
-                window.setParent(backdrops[0], Qt.Window)
-            window.setWindowFlags(
-                Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
-            )
-            window.setObjectName("wizardSurface")
-            window.setAttribute(Qt.WA_StyledBackground)
-            _show_centered(window)
+            host = _DimHost(window)
+            host.showFullScreen()
         else:
             window.resize(1100, 720)
             window.show()
         app.exec()
-        for b in backdrops:
-            b.close()
+        if host is not None:
+            host.close()
         return state.exit_code
     except Exception:
         log.error("Wizard crashed (reason=%s session=%s)", reason, session_id, exc_info=True)
         return EXIT_ERROR
 
 
-def _refront(window) -> None:
-    window.raise_()
-    window.activateWindow()
+class _DimHost:
+    """Single fullscreen translucent window that paints the dim itself and hosts
+    the wizard as a centered child — no sibling z-order to get wrong."""
 
+    def __new__(cls, wizard):
+        from PySide6.QtCore import Qt
+        from PySide6.QtGui import QColor, QGuiApplication, QPainter
+        from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
-def _show_backdrops(app, on_click=None) -> list:
-    """One dimming layer per screen, kept beneath the wizard window.
+        class Host(QWidget):
+            def __init__(self, wizard_widget) -> None:
+                super().__init__()
+                self.wizard = wizard_widget
+                self.setWindowTitle("AfterScope")
+                self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+                self.setAttribute(Qt.WA_TranslucentBackground)
 
-    The shade never takes keyboard focus, and any click on it re-fronts the
-    wizard instead of interacting with the shade.
-    """
-    from PySide6.QtCore import Qt
-    from PySide6.QtGui import QGuiApplication
-    from PySide6.QtWidgets import QWidget
+                wizard_widget.setObjectName("wizardSurface")
+                wizard_widget.setAttribute(Qt.WA_StyledBackground)
+                screen = QGuiApplication.primaryScreen()
+                geo = screen.availableGeometry() if screen else None
+                if geo is not None:
+                    wizard_widget.setFixedSize(
+                        min(int(geo.width() * 0.85), 1320),
+                        min(int(geo.height() * 0.85), 900),
+                    )
+                else:
+                    wizard_widget.setFixedSize(1100, 720)
 
-    class _Shade(QWidget):
-        def mousePressEvent(self, event) -> None:  # noqa: N802 (Qt override)
-            if on_click is not None:
-                on_click()
-            event.accept()
+                outer = QVBoxLayout(self)
+                outer.setContentsMargins(0, 0, 0, 0)
+                inner = QHBoxLayout()
+                inner.addStretch(1)
+                inner.addWidget(wizard_widget)
+                inner.addStretch(1)
+                outer.addStretch(1)
+                outer.addLayout(inner)
+                outer.addStretch(1)
 
-    backdrops = []
-    for screen in QGuiApplication.screens():
-        shade = _Shade()
-        shade.setWindowFlags(
-            Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool
-            | Qt.WindowDoesNotAcceptFocus
-        )
-        shade.setAttribute(Qt.WA_ShowWithoutActivating)
-        # windowOpacity on an opaque widget dims reliably on Windows; QSS rgba
-        # translucency on a bare top-level widget does not.
-        shade.setAttribute(Qt.WA_StyledBackground)
-        shade.setStyleSheet("background: #0f172a;")
-        shade.setWindowOpacity(0.5)
-        shade.setGeometry(screen.geometry())
-        shade.show()
-        backdrops.append(shade)
-    return backdrops
+            def paintEvent(self, event) -> None:  # noqa: N802 (Qt override)
+                painter = QPainter(self)
+                painter.fillRect(self.rect(), QColor(15, 23, 42, 140))
+                painter.end()
 
+            def closeEvent(self, event) -> None:  # noqa: N802 (Qt override)
+                # Alt+F4 lands on the host; route it through the wizard's own
+                # close/skip protocol instead of vanishing silently.
+                if self.wizard.isVisible():
+                    event.ignore()
+                    self.wizard.close()
+                else:
+                    event.accept()
 
-def _show_centered(window) -> None:
-    """Size the wizard to ~85% of the screen (capped) and centre it."""
-    from PySide6.QtGui import QGuiApplication
-
-    screen = QGuiApplication.primaryScreen()
-    geo = screen.availableGeometry() if screen else None
-    if geo is None:
-        window.resize(1100, 720)
-        window.show()
-        return
-    width = min(int(geo.width() * 0.85), 1320)
-    height = min(int(geo.height() * 0.85), 900)
-    window.resize(width, height)
-    window.move(
-        geo.left() + (geo.width() - width) // 2,
-        geo.top() + (geo.height() - height) // 2,
-    )
-    window.show()
+        return Host(wizard)
