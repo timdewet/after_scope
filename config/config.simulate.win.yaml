@@ -1,0 +1,62 @@
+# Windows simulate profile: same loop as config.simulate.yaml but with the real
+# tray icon enabled (pystray) — for first-run verification on a Windows box.
+#   after-scope watchdog --config config/config.simulate.win.yaml
+#   python scripts/fake_zen.py            # "ZEN opens"
+#   python scripts/simulate_acquisition.py ~/after_scope_sim/scratch
+#   Ctrl+C fake_zen                       # "ZEN closes" -> wizard appears
+
+instrument:
+  name: "Simulated scope"
+  machine: "dev"
+
+zen:
+  process_names: []
+  cmdline_contains: "AFTER_SCOPE_FAKE_ZEN"
+  poll_seconds: 1
+
+watch_dirs:
+  - { path: "~/after_scope_sim/scratch", recursive: true }
+
+scan:
+  seconds: 3
+
+organize:
+  mode: move
+  filename_template: "{date}_{initials}_{experiment}_{strain}_{condition}_{seq:03d}"
+  dest_template: "{dropbox_root}/MicroscopeData/{year}/{initials}/{date}_{experiment}"
+
+dropbox:
+  root: "~/after_scope_sim/dropbox"
+
+solvent:
+  approved_solvent: "70% ethanol (sim)"
+  suggest_after_days: 14
+
+declare:
+  enabled: true
+  create_scratch_dir: true
+
+annotate:
+  mode: toast
+  timeout_seconds: 8
+
+handover:
+  idle_minutes: 45
+  auto_close_hours: 6
+
+roster:
+  - { name: "Tim de Wet", initials: "TdW" }
+  - { name: "Jane Doe", initials: "JD" }
+
+enforcement:
+  allow_skip: true
+  skip_requires_reason: true
+  nag_at_next_start: true
+
+tray:
+  enabled: true         # the point of this profile: verify the real tray on Windows
+
+ui:
+  kiosk: false          # windowed during dev
+
+data_dir: "~/after_scope_sim/data"
