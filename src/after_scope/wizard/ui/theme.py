@@ -189,6 +189,13 @@ QPushButton#bigYes {{
 }}
 QPushButton#bigYes:hover {{ background: {p.success_hover}; border-color: {p.success_hover}; }}
 
+QPushButton#bigNo {{
+    background: {p.danger}; border: 1px solid {p.danger};
+    color: {p.on_primary}; font-size: {t.FS_H2}px; font-weight: {t.FW_SEMIBOLD};
+    padding: {t.S4}px {t.S7}px;
+}}
+QPushButton#bigNo:hover {{ background: #b91c1c; border-color: #b91c1c; }}
+
 QPushButton#rosterButton {{
     font-size: {t.FS_H2}px; padding: {t.S4}px {t.S5}px;
     background: {p.surface}; border: 1px solid {p.border_strong};
