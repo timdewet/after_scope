@@ -76,24 +76,45 @@ def end_pages_for_retro(retro_state: WizardState) -> list:
     return pages
 
 
+QUICK_SKIP_PURPOSES = ["Image viewing", "Analysis only", "Quick look"]
+
+
 class SkipDialog(QDialog):
     def __init__(self, require_reason: bool, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Skip checklist")
+        self.quick_purpose: str | None = None
         v = QVBoxLayout(self)
+        v.setSpacing(10)
         v.addWidget(QLabel(
             "Skipping is allowed but logged, and the checklist will come back at the "
             "next session start."
         ))
+        quick_label = QLabel("NOT AN EXPERIMENT?  One tap skips with the reason logged:")
+        quick_label.setObjectName("fieldLabel")
+        v.addWidget(quick_label)
+        chips = QHBoxLayout()
+        for purpose in QUICK_SKIP_PURPOSES:
+            btn = QPushButton(purpose)
+            btn.setObjectName("chip")
+            btn.clicked.connect(lambda _=False, p=purpose: self._quick(p))
+            chips.addWidget(btn)
+        chips.addStretch(1)
+        v.addLayout(chips)
         self.reason = QLineEdit()
-        self.reason.setPlaceholderText("Why are you skipping? (required)" if require_reason
-                                       else "Reason (optional)")
+        self.reason.setPlaceholderText("Other reason (required)" if require_reason
+                                       else "Other reason (optional)")
         v.addWidget(self.reason)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._try_accept)
         buttons.rejected.connect(self.reject)
         v.addWidget(buttons)
         self._require = require_reason
+
+    def _quick(self, purpose: str) -> None:
+        self.quick_purpose = purpose
+        self.reason.setText(purpose)
+        self.accept()
 
     def _try_accept(self) -> None:
         if self._require and not self.reason.text().strip():
@@ -236,6 +257,11 @@ class WizardWindow(QWidget):
         if dlg.exec() != QDialog.Accepted:
             return
         reason = dlg.reason.text().strip()
+        if dlg.quick_purpose:
+            # a quick reason doubles as the session's declared purpose
+            repo.set_session_purpose(
+                self.state.conn, self.state.session_id, dlg.quick_purpose
+            )
         if self.state.is_end_of_session:
             self.state.sm.checklist_skipped(self.state.session_id, reason)
         else:
