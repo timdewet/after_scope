@@ -39,12 +39,15 @@ def build_pages(state: WizardState) -> list:
     if state.reason == "declare":
         return [ExperimentPage(state)]
     if state.reason in PREUSE_REASONS:
+        from .pages.preuse import SavingPage
+
         pages = [UserPage(state)]
         if state.cfg.declare.enabled:
             pages.append(ExperimentPage(state))
         pages += [ArrivalPage(state), IssuesPage(state)]
         if state.reason == "start" and state.sm.pending_nag() is not None:
             pages.append(NagOfferPage(state))
+        pages.append(SavingPage(state))
         return pages
     # end-of-session (close | crash | nag)
     pages = [

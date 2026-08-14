@@ -166,6 +166,47 @@ class IssuesPage(WizardPage):
         pass
 
 
+class SavingPage(WizardPage):
+    """Final pre-use page: where to save and what happens to the files."""
+
+    title = "You're set — here's how saving works"
+    short = "Saving"
+
+    def build(self) -> None:
+        from ..ui.widgets import SectionCard
+
+        self.card = SectionCard("While you image")
+        self.dir_line = QLabel("")
+        self.dir_line.setObjectName("h3")
+        self.dir_line.setWordWrap(True)
+        self.card.body.addWidget(self.dir_line)
+        for line in (
+            "When ZEN closes, AfterScope renames your files to the lab convention "
+            "and files them into the shared Dropbox tree automatically.",
+            "Saving into your own Dropbox folder is possible, but those files are "
+            "not catalogued.",
+        ):
+            row = QLabel(line)
+            row.setWordWrap(True)
+            row.setObjectName("muted")
+            self.card.body.addWidget(row)
+        self.layout_.addWidget(self.card)
+        self.layout_.addStretch(1)
+
+    def refresh(self) -> None:
+        row = repo.get_session(self.state.conn, self.state.session_id)
+        planned = row["planned_dir"] if row and row["planned_dir"] else None
+        if planned:
+            self.dir_line.setText(f"Save your images into your session folder:\n{planned}")
+        else:
+            watch = self.state.cfg.watch_dirs
+            working = str(watch[0].path) if watch else "the working directory"
+            self.dir_line.setText(f"Save your images into:\n{working}")
+
+    def auto_fill(self) -> None:
+        pass
+
+
 class NagOfferPage(WizardPage):
     title = "Unfinished checklist from a previous session"
     short = "Backlog"

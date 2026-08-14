@@ -133,23 +133,6 @@ class ExperimentPage(WizardPage):
         self.dir_label.setObjectName("caption")
         self.dir_label.setWordWrap(True)
         self.layout_.addWidget(self.dir_label)
-
-        saving = SectionCard("How saving works")
-        watch = self.state.cfg.watch_dirs
-        working_dir = str(watch[0].path) if watch else "the working directory"
-        for line in (
-            f"1   Save your images into  {working_dir}  during the session"
-            "  (a session folder is created there when you declare above)",
-            "2   When ZEN closes, AfterScope renames them to the lab convention"
-            " and files them into the shared Dropbox tree",
-            "3   Saving into your own Dropbox folder is possible, but those files"
-            " are not catalogued",
-        ):
-            row = QLabel(line)
-            row.setObjectName("cardTitle")
-            row.setWordWrap(True)
-            saving.body.addWidget(row)
-        self.layout_.addWidget(saving)
         self.layout_.addStretch(1)
 
     def refresh(self) -> None:
