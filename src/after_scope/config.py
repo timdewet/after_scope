@@ -31,6 +31,10 @@ class ZenCfg(BaseModel):
     # name (a python script's process name is just "python").
     cmdline_contains: str | None = None
     poll_seconds: float = 3.0
+    # How long to wait after the ZEN process vanishes before declaring the
+    # session over (catches helper respawns). Directly adds to the delay between
+    # closing ZEN and the wizard appearing — keep it short.
+    exit_debounce_seconds: float = 2.0
 
 
 class WatchDirCfg(BaseModel):

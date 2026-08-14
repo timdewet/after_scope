@@ -56,7 +56,6 @@ def request_pause(paths, until: datetime) -> None:
     except OSError:
         log.error("Could not write pause file", exc_info=True)
 
-DEBOUNCE_SECONDS = 5.0
 RESTART_WAIT_SECONDS = 600.0
 FRESH_INPUT_SECONDS = 10.0
 NIGHTLY_HOUR = 3
@@ -323,7 +322,7 @@ class WatchdogService:
             return
 
         if self.proc and not self.watcher.is_alive(self.proc):
-            self._deadline = now + DEBOUNCE_SECONDS
+            self._deadline = now + self.cfg.zen.exit_debounce_seconds
             self.state = State.EXITING
             return
 
