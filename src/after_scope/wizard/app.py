@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import sys
-from importlib import resources
 
 from ..appcontext import AppContext
 from .state import EXIT_ERROR, WizardState
@@ -19,14 +18,10 @@ def run_wizard(
     from PySide6.QtWidgets import QApplication
 
     from .controller import WizardWindow
+    from .ui.theme import apply_theme
 
     app = QApplication.instance() or QApplication(sys.argv[:1])
-    try:
-        app.setStyleSheet(
-            (resources.files("after_scope.wizard") / "style.qss").read_text(encoding="utf-8")
-        )
-    except OSError:
-        pass
+    apply_theme(app)
 
     state = WizardState(ctx=ctx, reason=reason, session_id=session_id)
     try:

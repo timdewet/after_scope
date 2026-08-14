@@ -120,6 +120,7 @@ class _ItemWidget(QWidget):
 
 class CleaningPage(WizardPage):
     title = "Cleaning & shutdown checklist"
+    short = "Cleaning"
 
     def build(self) -> None:
         self.items = engine.load_items(self.state.cfg)

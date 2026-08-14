@@ -13,6 +13,7 @@ from .base import WizardPage
 
 class DustPage(WizardPage):
     title = "Dust reference"
+    short = "Dust ref"
 
     def build(self) -> None:
         self.body = QLabel()

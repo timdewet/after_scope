@@ -28,6 +28,7 @@ FOUND_DIRTY_CATEGORIES = [
 
 class ArrivalPage(WizardPage):
     title = "Was everything OK when you arrived?"
+    short = "Arrival"
 
     def build(self) -> None:
         self.choice: bool | None = None
@@ -125,6 +126,7 @@ class ArrivalPage(WizardPage):
 
 class IssuesPage(WizardPage):
     title = "Known issues on this microscope"
+    short = "Notices"
 
     def build(self) -> None:
         self.body = QLabel()
@@ -150,6 +152,7 @@ class IssuesPage(WizardPage):
 
 class NagOfferPage(WizardPage):
     title = "Unfinished checklist from a previous session"
+    short = "Backlog"
 
     def build(self) -> None:
         self.body = QLabel()

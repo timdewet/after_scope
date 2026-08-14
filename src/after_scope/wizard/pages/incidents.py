@@ -18,6 +18,7 @@ from .base import WizardPage
 
 class IncidentPage(WizardPage):
     title = "Any problems during your session?"
+    short = "Problems"
 
     def build(self) -> None:
         self.drafts_box = QGroupBox("From your checklist answers")

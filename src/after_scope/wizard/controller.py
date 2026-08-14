@@ -112,7 +112,14 @@ class WizardWindow(QWidget):
         for p in self.pages:
             p.controller = self
 
+        from .ui import tokens
+        from .ui.stepper import Stepper
+
         v = QVBoxLayout(self)
+        v.setContentsMargins(tokens.S6, tokens.S5, tokens.S6, tokens.S4)
+        v.setSpacing(tokens.S3)
+        self.stepper = Stepper()
+        v.addWidget(self.stepper)
         self.stack = QStackedWidget()
         for p in self.pages:
             self.stack.addWidget(p)
@@ -124,6 +131,7 @@ class WizardWindow(QWidget):
         self.error_label = QLabel("")
         self.error_label.setObjectName("errorLabel")
         self.progress = QLabel("")
+        self.progress.setObjectName("caption")
         self.next_btn = QPushButton("Next →")
         self.next_btn.setObjectName("nextButton")
         self.next_btn.clicked.connect(self.next_clicked)
@@ -153,6 +161,14 @@ class WizardWindow(QWidget):
         self.back_btn.setVisible(self.index > 0)
         self.progress.setText(f"Step {self.index + 1} of {len(self.pages)}")
         self.next_btn.setText("Done ✓" if self.index == len(self.pages) - 1 else "Next →")
+        self._sync_stepper()
+
+    def _sync_stepper(self) -> None:
+        titles = [p.short or p.title for p in self.pages]
+        if titles != getattr(self, "_stepper_titles", None):
+            self._stepper_titles = titles
+            self.stepper.set_steps(titles)
+        self.stepper.set_current(self.index)
 
     def next_clicked(self) -> None:
         page = self.pages[self.index]

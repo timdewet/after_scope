@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 
 class ExperimentPage(WizardPage):
     title = "What are you imaging today?"
+    short = "Plan"
 
     def build(self) -> None:
         hint = QLabel(

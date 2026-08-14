@@ -21,6 +21,7 @@ from .base import WizardPage
 
 class UserPage(WizardPage):
     title = "Who's using the microscope?"
+    short = "Who"
 
     def build(self) -> None:
         self.selected_uid: int | None = None
@@ -113,6 +114,7 @@ class UserPage(WizardPage):
 
 class WhoamiPage(WizardPage):
     title = "Who's at the microscope?"
+    short = "Who"
 
     def build(self) -> None:
         self.info = QLabel()

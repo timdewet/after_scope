@@ -12,6 +12,7 @@ from .base import WizardPage
 
 class SummaryPage(WizardPage):
     title = "All done"
+    short = "Done"
 
     def build(self) -> None:
         self.body = QLabel()

@@ -20,6 +20,7 @@ from .base import WizardPage
 
 class FilesPage(WizardPage):
     title = "Your images from this session"
+    short = "Images"
 
     def build(self) -> None:
         self.model = SessionFilesModel(self.state.conn, self.state.session_id)
