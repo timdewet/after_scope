@@ -40,6 +40,22 @@ EXIT_SKIPPED = 2
 EXIT_RESTART_ZEN = 3
 EXIT_HANDOVER = 4
 
+
+def read_pause_until(paths) -> datetime | None:
+    """Timestamp before which the watchdog must not run, or None."""
+    try:
+        raw = paths.pause_until.read_text(encoding="utf-8-sig").strip()
+        return datetime.fromisoformat(raw) if raw else None
+    except (OSError, ValueError):
+        return None
+
+
+def request_pause(paths, until: datetime) -> None:
+    try:
+        paths.pause_until.write_text(until.isoformat(timespec="seconds"), encoding="utf-8")
+    except OSError:
+        log.error("Could not write pause file", exc_info=True)
+
 DEBOUNCE_SECONDS = 5.0
 RESTART_WAIT_SECONDS = 600.0
 FRESH_INPUT_SECONDS = 10.0

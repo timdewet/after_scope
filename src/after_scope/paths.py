@@ -51,6 +51,12 @@ class AppPaths:
         return self.data_dir / "stop.flag"
 
     @property
+    def pause_until(self) -> Path:
+        # holds an ISO timestamp; the watchdog refuses to run before it passes,
+        # which is what makes "pause" survive the Task Scheduler keep-alive
+        return self.data_dir / "pause.until"
+
+    @property
     def last_good_config(self) -> Path:
         return self.cache_dir / "config.last_good.yaml"
 
