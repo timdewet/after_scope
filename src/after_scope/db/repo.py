@@ -191,6 +191,18 @@ def set_session_plan(
         )
 
 
+def set_session_purpose(conn: sqlite3.Connection, session_id: int, purpose: str) -> None:
+    """Record a quick session purpose (viewing / analysis / quick look) without
+    touching the rest of the plan; existing notes are preserved."""
+    with conn:
+        conn.execute(
+            """UPDATE sessions
+               SET planned_notes = COALESCE(NULLIF(planned_notes, ''), ?)
+               WHERE id=?""",
+            (purpose, session_id),
+        )
+
+
 def last_session_plan_for_user(
     conn: sqlite3.Connection, user_id: int
 ) -> sqlite3.Row | None:

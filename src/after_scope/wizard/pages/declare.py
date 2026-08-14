@@ -49,12 +49,28 @@ class ExperimentPage(WizardPage):
     title = "What are you imaging today?"
     short = "Plan"
 
+    QUICK_PURPOSES = ["Image viewing", "Analysis only", "Quick look"]
+
     def build(self) -> None:
         hint = QLabel(
             "Optional — 30 seconds here tags every file automatically as you save it."
         )
         hint.setObjectName("caption")
         self.layout_.addWidget(hint)
+
+        # one-tap escape for non-experiment sessions: records the purpose and
+        # skips the whole form
+        quick_row = QHBoxLayout()
+        quick_label = QLabel("NOT AN EXPERIMENT?")
+        quick_label.setObjectName("fieldLabel")
+        quick_row.addWidget(quick_label)
+        for purpose in self.QUICK_PURPOSES:
+            btn = QPushButton(purpose)
+            btn.setObjectName("chip")
+            btn.clicked.connect(lambda _=False, p=purpose: self._quick_purpose(p))
+            quick_row.addWidget(btn)
+        quick_row.addStretch(1)
+        self.layout_.addLayout(quick_row)
 
         conn = self.state.conn
         columns = QHBoxLayout()
@@ -133,7 +149,32 @@ class ExperimentPage(WizardPage):
         self.dir_label.setObjectName("caption")
         self.dir_label.setWordWrap(True)
         self.layout_.addWidget(self.dir_label)
+
+        saving = SectionCard("How saving works")
+        watch = self.state.cfg.watch_dirs
+        working_dir = str(watch[0].path) if watch else "the working directory"
+        for line in (
+            f"1   Save your images into  {working_dir}  during the session"
+            "  (a session folder is created there when you declare above)",
+            "2   When ZEN closes, AfterScope renames them to the lab convention"
+            " and files them into the shared Dropbox tree",
+            "3   Saving into your own Dropbox folder is possible, but those files"
+            " are not catalogued",
+        ):
+            row = QLabel(line)
+            row.setObjectName("cardTitle")
+            row.setWordWrap(True)
+            saving.body.addWidget(row)
+        self.layout_.addWidget(saving)
         self.layout_.addStretch(1)
+
+    def _quick_purpose(self, purpose: str) -> None:
+        repo.set_session_purpose(self.state.conn, self.state.session_id, purpose)
+        repo.audit(
+            self.state.conn, "session_purpose",
+            session_id=self.state.session_id, purpose=purpose,
+        )
+        self.controller.advance()  # skips save(): the form is deliberately empty
 
     def refresh(self) -> None:
         self.same_btn.setVisible(

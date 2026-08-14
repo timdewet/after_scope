@@ -50,6 +50,8 @@ class UserPage(WizardPage):
         self.layout_.addStretch(1)
 
     def refresh(self) -> None:
+        if self.state.is_end_of_session:
+            self.heading.setText("Who was using the microscope?")
         # rebuild roster buttons (recent users first)
         while self.roster_grid.count():
             item = self.roster_grid.takeAt(0)
@@ -70,6 +72,10 @@ class UserPage(WizardPage):
             user = repo.get_user(self.state.conn, row["user_id"])
             if user:
                 self._pick(user["id"], user["full_name"], method=row["identify_method"] or "roster")
+        elif self.state.is_end_of_session and self.selected_uid is None and users:
+            # end-of-session with no identity on record: pre-select the most
+            # recent user so confirming is one tap (still freely changeable)
+            self._pick(users[0]["id"], users[0]["full_name"])
 
     def _pick(self, uid: int, name: str, method: str = "roster") -> None:
         self.selected_uid = uid

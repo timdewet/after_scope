@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 
 from ...db import repo
 from ..models import SessionFilesModel
+from ..ui.widgets import ChipGroup
 from .base import WizardPage
 
 
@@ -66,14 +67,31 @@ class FilesPage(WizardPage):
         self.hint.setWordWrap(True)
         self.layout_.addWidget(self.hint)
 
+        # shown only when the session produced no files: capture what it was for
+        self.purpose_label = QLabel("WHAT WAS THIS SESSION?")
+        self.purpose_label.setObjectName("fieldLabel")
+        self.purpose = ChipGroup(
+            ["Image viewing", "Analysis only", "Quick look"], exclusive=True
+        )
+        self.layout_.addWidget(self.purpose_label)
+        self.layout_.addWidget(self.purpose)
+        self.purpose_label.hide()
+        self.purpose.hide()
+
     def refresh(self) -> None:
         self.model.reload()
         self.table.resizeColumnsToContents()
-        if not self.model.rows:
+        empty = not self.model.rows
+        self.purpose_label.setVisible(empty)
+        self.purpose.setVisible(empty)
+        if empty:
             self.hint.setText(
                 "No new image files were detected this session. If you saved somewhere "
                 "unusual, tell the lab manager so the watched folders can be updated."
             )
+            row = repo.get_session(self.state.conn, self.state.session_id)
+            if row and row["planned_notes"]:
+                self.purpose.set_value(row["planned_notes"])
 
     def _apply(self) -> None:
         selected = sorted({i.row() for i in self.table.selectionModel().selectedRows()})
@@ -88,6 +106,10 @@ class FilesPage(WizardPage):
 
     def save(self) -> None:
         self.model.save_to_db(self.state.user_id)
+        if not self.model.rows and self.purpose.value():
+            repo.set_session_purpose(
+                self.state.conn, self.state.session_id, self.purpose.value()
+            )
 
     def auto_fill(self) -> None:
         self.model.apply_batch([], experiment="e2e-experiment", strain="TEST1", condition="ctrl")
