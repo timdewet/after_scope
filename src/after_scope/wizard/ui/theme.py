@@ -239,6 +239,16 @@ QLabel#fieldLabel {{
 QLabel#statValue {{ font-size: 30px; font-weight: {t.FW_BOLD}; }}
 QLabel#emptyState {{ font-size: {t.FS_H2}px; color: {p.text_subtle}; padding: {t.S7}px; }}
 
+/* -- checklist rows ----------------------------------------------------------- */
+QFrame#checkRow {{
+    background: {p.surface};
+    border: 1px solid {p.border};
+    border-radius: {t.R_MD}px;
+}}
+QFrame#checkRow:hover {{ border-color: {p.text_subtle}; }}
+QFrame#checkRow[done="true"] {{ border-color: {p.success}; }}
+QFrame#checkRow QLabel#rowLabel {{ font-size: {t.FS_H3}px; }}
+
 /* -- check / radio ---------------------------------------------------------- */
 QCheckBox, QRadioButton {{ background: transparent; spacing: {t.S2}px; }}
 QCheckBox::indicator, QRadioButton::indicator {{

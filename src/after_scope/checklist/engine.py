@@ -25,7 +25,12 @@ def load_items(cfg: AppConfig) -> list[ChecklistItemCfg]:
 
 
 def _objectives_contain_oil(conn: sqlite3.Connection, session_id: int, cfg: AppConfig) -> bool:
-    return bool(repo.session_oil_objectives(conn, session_id))
+    if repo.session_oil_objectives(conn, session_id):
+        return True
+    # fall back to the declared imaging plan when file metadata is silent
+    row = repo.get_session(conn, session_id)
+    imaging = (row["planned_imaging"] or "") if row else ""
+    return "oil" in imaging.lower()
 
 
 PREFILL_HOOKS = {

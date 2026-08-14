@@ -43,10 +43,12 @@ class ChipGroup(QWidget):
         options: list[str],
         target: QLineEdit | None = None,
         exclusive: bool = False,
+        on_change=None,
     ) -> None:
         super().__init__()
         self.target = target
         self.exclusive = exclusive
+        self.on_change = on_change
         self._syncing = False
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -73,6 +75,8 @@ class ChipGroup(QWidget):
                 for name, chip in self.chips.items():
                     if name != option:
                         chip.setChecked(False)
+            if self.on_change is not None:
+                self.on_change()
             return
         tokens = _tokens_of(self.target.text())
         if self.chips[option].isChecked():
