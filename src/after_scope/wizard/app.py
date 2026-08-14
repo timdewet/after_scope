@@ -37,9 +37,13 @@ def run_wizard(
             )
             window.showFullScreen()
         elif mode == "dimmed":
-            backdrops = _show_backdrops(app)
+            backdrops = _show_backdrops(app, on_click=lambda: _refront(window))
+            if backdrops:
+                # Owned window: Windows keeps it permanently above its owner, so
+                # clicking the shade can never bury the wizard beneath it.
+                window.setParent(backdrops[0], Qt.Window)
             window.setWindowFlags(
-                window.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+                Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
             )
             window.setObjectName("wizardSurface")
             window.setAttribute(Qt.WA_StyledBackground)
@@ -56,18 +60,35 @@ def run_wizard(
         return EXIT_ERROR
 
 
-def _show_backdrops(app) -> list:
-    """One inert dimming layer per screen, shown beneath the wizard window."""
+def _refront(window) -> None:
+    window.raise_()
+    window.activateWindow()
+
+
+def _show_backdrops(app, on_click=None) -> list:
+    """One dimming layer per screen, kept beneath the wizard window.
+
+    The shade never takes keyboard focus, and any click on it re-fronts the
+    wizard instead of interacting with the shade.
+    """
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QGuiApplication
     from PySide6.QtWidgets import QWidget
 
+    class _Shade(QWidget):
+        def mousePressEvent(self, event) -> None:  # noqa: N802 (Qt override)
+            if on_click is not None:
+                on_click()
+            event.accept()
+
     backdrops = []
     for screen in QGuiApplication.screens():
-        shade = QWidget()
+        shade = _Shade()
         shade.setWindowFlags(
             Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool
+            | Qt.WindowDoesNotAcceptFocus
         )
+        shade.setAttribute(Qt.WA_ShowWithoutActivating)
         # windowOpacity on an opaque widget dims reliably on Windows; QSS rgba
         # translucency on a bare top-level widget does not.
         shade.setAttribute(Qt.WA_StyledBackground)
