@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 
 from ...db import repo
 from ...util import fmt_dt
+from ..ui.widgets import EmptyState, ListCard
 from .base import WizardPage
 
 FOUND_DIRTY_CATEGORIES = [
@@ -33,13 +34,16 @@ class ArrivalPage(WizardPage):
     def build(self) -> None:
         self.choice: bool | None = None
         row = QHBoxLayout()
+        row.setSpacing(16)
         self.ok_btn = QPushButton("All good 👍")
         self.ok_btn.setObjectName("bigYes")
+        self.ok_btn.setMinimumHeight(64)
         self.ok_btn.clicked.connect(lambda: self._set_choice(True))
         self.dirty_btn = QPushButton("I found problems…")
+        self.dirty_btn.setMinimumHeight(64)
         self.dirty_btn.clicked.connect(lambda: self._set_choice(False))
-        row.addWidget(self.ok_btn)
-        row.addWidget(self.dirty_btn)
+        row.addWidget(self.ok_btn, stretch=1)
+        row.addWidget(self.dirty_btn, stretch=1)
         self.layout_.addLayout(row)
 
         self.detail_box = QGroupBox("What did you find? (reported to the lab, attributed to the previous session)")
@@ -129,22 +133,34 @@ class IssuesPage(WizardPage):
     short = "Notices"
 
     def build(self) -> None:
-        self.body = QLabel()
-        self.body.setWordWrap(True)
-        self.layout_.addWidget(self.body)
+        self.cards_box = QVBoxLayout()
+        self.cards_box.setSpacing(8)
+        self.layout_.addLayout(self.cards_box)
+        self.more_label = QLabel("")
+        self.more_label.setObjectName("caption")
+        self.layout_.addWidget(self.more_label)
         self.layout_.addStretch(1)
 
     def refresh(self) -> None:
+        while self.cards_box.count():
+            item = self.cards_box.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self.more_label.setText("")
         rows = repo.open_incidents(self.state.conn)
         if not rows:
-            self.body.setText("No open issues. Have a good session!")
+            self.cards_box.addWidget(
+                EmptyState("No open issues — have a good session!")
+            )
             return
-        lines = []
-        for r in rows[:8]:
-            desc = r["description"] or r["category"]
+        for r in rows[:6]:
+            desc = r["description"] or r["category"].replace("_", " ")
             reporter = r["reporter_name"] or "unknown"
-            lines.append(f"• [{fmt_dt(r['created_at'], '%d %b')}] {desc}  — {reporter}")
-        self.body.setText("\n".join(lines))
+            meta = f"{fmt_dt(r['created_at'], '%d %b')} · {reporter}"
+            severity = r["severity"] if "severity" in r.keys() else None
+            self.cards_box.addWidget(ListCard(desc, meta, severity=severity))
+        if len(rows) > 6:
+            self.more_label.setText(f"…and {len(rows) - 6} more on the dashboard.")
 
     def auto_fill(self) -> None:
         pass

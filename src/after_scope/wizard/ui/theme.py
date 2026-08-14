@@ -203,6 +203,42 @@ QPushButton#skipLink {{
 }}
 QPushButton#skipLink:hover {{ color: {p.text_muted}; }}
 
+QPushButton#ghost {{
+    background: transparent; border: 1px solid transparent;
+    color: {p.text_muted}; padding: {t.S1 + 1}px {t.S3}px;
+}}
+QPushButton#ghost:hover {{ background: {p.surface_alt}; color: {p.text}; }}
+
+/* -- chips ------------------------------------------------------------------- */
+QPushButton#chip {{
+    border-radius: {t.R_PILL}px;
+    padding: {t.S1 + 2}px {t.S4}px;
+    background: {p.surface};
+    border: 1px solid {p.border_strong};
+    color: {p.text};
+    font-size: {t.FS_BODY}px;
+}}
+QPushButton#chip:hover {{ border-color: {p.primary}; color: {p.primary}; background: {p.surface}; }}
+QPushButton#chip:checked {{
+    background: {p.primary}; border-color: {p.primary};
+    color: {p.on_primary}; font-weight: {t.FW_SEMIBOLD};
+}}
+
+/* -- cards / tiles ----------------------------------------------------------- */
+QFrame#card {{
+    background: {p.surface};
+    border: 1px solid {p.border};
+    border-radius: {t.R_LG}px;
+}}
+QLabel#h3 {{ font-size: {t.FS_H3}px; font-weight: {t.FW_SEMIBOLD}; }}
+QLabel#cardTitle {{ font-size: {t.FS_BODY}px; font-weight: {t.FW_SEMIBOLD}; }}
+QLabel#fieldLabel {{
+    font-size: {t.FS_CAPTION}px; font-weight: {t.FW_SEMIBOLD};
+    color: {p.text_muted}; margin-top: {t.S2}px;
+}}
+QLabel#statValue {{ font-size: 30px; font-weight: {t.FW_BOLD}; }}
+QLabel#emptyState {{ font-size: {t.FS_H2}px; color: {p.text_subtle}; padding: {t.S7}px; }}
+
 /* -- check / radio ---------------------------------------------------------- */
 QCheckBox, QRadioButton {{ background: transparent; spacing: {t.S2}px; }}
 QCheckBox::indicator, QRadioButton::indicator {{

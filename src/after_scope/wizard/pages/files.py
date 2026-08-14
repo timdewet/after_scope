@@ -41,10 +41,17 @@ class FilesPage(WizardPage):
         )
         self.strain = QLineEdit()
         self.strain.setPlaceholderText("Strain(s)")
+        self.strain.setCompleter(QCompleter(repo.recent_file_values(self.state.conn, "strain")))
         self.condition = QLineEdit()
         self.condition.setPlaceholderText("Condition / treatment")
+        self.condition.setCompleter(
+            QCompleter(repo.recent_file_values(self.state.conn, "condition"))
+        )
         self.coverslip = QLineEdit()
-        self.coverslip.setPlaceholderText("Coverslip / prep")
+        self.coverslip.setPlaceholderText("Preparation")
+        self.coverslip.setCompleter(
+            QCompleter(repo.recent_file_values(self.state.conn, "coverslip"))
+        )
         self.notes = QLineEdit()
         self.notes.setPlaceholderText("Notes")
         apply_btn = QPushButton("Apply")
