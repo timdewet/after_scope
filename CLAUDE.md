@@ -77,6 +77,12 @@ made in the Dropbox web UI). Frozen-build fixes that must not regress:
 BOM-less `config.path` (`paths.py` reads utf-8-sig; install.ps1 writes via
 `[IO.File]::WriteAllText`). Updates: build, then `deploy/windows/update.ps1`.
 
+**Currently STOPPED (2026-08-15):** the watchdog was exited and the
+`AfterScopeWatchdog` scheduled task disabled for a development pause. To resume,
+from an admin PowerShell: `Enable-ScheduledTask -TaskName AfterScopeWatchdog;
+Start-ScheduledTask -TaskName AfterScopeWatchdog`. All work to date is on the
+`windows-deploy` branch (PR #1); the deployed bundle matches its head.
+
 ## Next steps (in order)
 
 1. Remaining smoke items (README checklist): real ZEN open/close/crash cycle,
