@@ -39,12 +39,15 @@ def build_pages(state: WizardState) -> list:
     if state.reason == "declare":
         return [ExperimentPage(state)]
     if state.reason in PREUSE_REASONS:
+        from .pages.preuse import SavingPage
+
         pages = [UserPage(state)]
         if state.cfg.declare.enabled:
             pages.append(ExperimentPage(state))
         pages += [ArrivalPage(state), IssuesPage(state)]
         if state.reason == "start" and state.sm.pending_nag() is not None:
             pages.append(NagOfferPage(state))
+        pages.append(SavingPage(state))
         return pages
     # end-of-session (close | crash | nag)
     pages = [
@@ -76,24 +79,45 @@ def end_pages_for_retro(retro_state: WizardState) -> list:
     return pages
 
 
+QUICK_SKIP_PURPOSES = ["Image viewing", "Analysis only", "Quick look"]
+
+
 class SkipDialog(QDialog):
     def __init__(self, require_reason: bool, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Skip checklist")
+        self.quick_purpose: str | None = None
         v = QVBoxLayout(self)
+        v.setSpacing(10)
         v.addWidget(QLabel(
             "Skipping is allowed but logged, and the checklist will come back at the "
             "next session start."
         ))
+        quick_label = QLabel("NOT AN EXPERIMENT?  One tap skips with the reason logged:")
+        quick_label.setObjectName("fieldLabel")
+        v.addWidget(quick_label)
+        chips = QHBoxLayout()
+        for purpose in QUICK_SKIP_PURPOSES:
+            btn = QPushButton(purpose)
+            btn.setObjectName("chip")
+            btn.clicked.connect(lambda _=False, p=purpose: self._quick(p))
+            chips.addWidget(btn)
+        chips.addStretch(1)
+        v.addLayout(chips)
         self.reason = QLineEdit()
-        self.reason.setPlaceholderText("Why are you skipping? (required)" if require_reason
-                                       else "Reason (optional)")
+        self.reason.setPlaceholderText("Other reason (required)" if require_reason
+                                       else "Other reason (optional)")
         v.addWidget(self.reason)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._try_accept)
         buttons.rejected.connect(self.reject)
         v.addWidget(buttons)
         self._require = require_reason
+
+    def _quick(self, purpose: str) -> None:
+        self.quick_purpose = purpose
+        self.reason.setText(purpose)
+        self.accept()
 
     def _try_accept(self) -> None:
         if self._require and not self.reason.text().strip():
@@ -112,7 +136,14 @@ class WizardWindow(QWidget):
         for p in self.pages:
             p.controller = self
 
+        from .ui import tokens
+        from .ui.stepper import Stepper
+
         v = QVBoxLayout(self)
+        v.setContentsMargins(tokens.S6, tokens.S5, tokens.S6, tokens.S4)
+        v.setSpacing(tokens.S3)
+        self.stepper = Stepper()
+        v.addWidget(self.stepper)
         self.stack = QStackedWidget()
         for p in self.pages:
             self.stack.addWidget(p)
@@ -124,6 +155,7 @@ class WizardWindow(QWidget):
         self.error_label = QLabel("")
         self.error_label.setObjectName("errorLabel")
         self.progress = QLabel("")
+        self.progress.setObjectName("caption")
         self.next_btn = QPushButton("Next →")
         self.next_btn.setObjectName("nextButton")
         self.next_btn.clicked.connect(self.next_clicked)
@@ -153,6 +185,14 @@ class WizardWindow(QWidget):
         self.back_btn.setVisible(self.index > 0)
         self.progress.setText(f"Step {self.index + 1} of {len(self.pages)}")
         self.next_btn.setText("Done ✓" if self.index == len(self.pages) - 1 else "Next →")
+        self._sync_stepper()
+
+    def _sync_stepper(self) -> None:
+        titles = [p.short or p.title for p in self.pages]
+        if titles != getattr(self, "_stepper_titles", None):
+            self._stepper_titles = titles
+            self.stepper.set_steps(titles)
+        self.stepper.set_current(self.index)
 
     def next_clicked(self) -> None:
         page = self.pages[self.index]
@@ -220,6 +260,11 @@ class WizardWindow(QWidget):
         if dlg.exec() != QDialog.Accepted:
             return
         reason = dlg.reason.text().strip()
+        if dlg.quick_purpose:
+            # a quick reason doubles as the session's declared purpose
+            repo.set_session_purpose(
+                self.state.conn, self.state.session_id, dlg.quick_purpose
+            )
         if self.state.is_end_of_session:
             self.state.sm.checklist_skipped(self.state.session_id, reason)
         else:

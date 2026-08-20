@@ -29,15 +29,15 @@ def _write_config(tmp_path: Path) -> Path:
           cmdline_contains: "AFTER_SCOPE_FAKE_ZEN_E2E"
           poll_seconds: 0.2
         watch_dirs:
-          - {{ path: "{tmp_path / 'scratch'}" }}
+          - {{ path: "{(tmp_path / 'scratch').as_posix()}" }}
         scan: {{ seconds: 1 }}
-        dropbox: {{ root: "{tmp_path / 'dropbox'}" }}
+        dropbox: {{ root: "{(tmp_path / 'dropbox').as_posix()}" }}
         roster:
           - {{ name: "Tim de Wet", initials: "TdW" }}
           - {{ name: "Jane Doe", initials: "JD" }}
         ui: {{ kiosk: false }}
         tray: {{ enabled: false }}
-        data_dir: "{tmp_path / 'data'}"
+        data_dir: "{(tmp_path / 'data').as_posix()}"
     """)
     p = tmp_path / "config.yaml"
     p.write_text(cfg, encoding="utf-8")

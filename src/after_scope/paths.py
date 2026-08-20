@@ -51,6 +51,12 @@ class AppPaths:
         return self.data_dir / "stop.flag"
 
     @property
+    def pause_until(self) -> Path:
+        # holds an ISO timestamp; the watchdog refuses to run before it passes,
+        # which is what makes "pause" survive the Task Scheduler keep-alive
+        return self.data_dir / "pause.until"
+
+    @property
     def last_good_config(self) -> Path:
         return self.cache_dir / "config.last_good.yaml"
 
@@ -80,7 +86,8 @@ def resolve_config_path(cli_arg: str | None) -> Path:
         return Path(env).expanduser()
     pointer = default_data_dir() / "config.path"
     if pointer.exists():
-        target = pointer.read_text(encoding="utf-8").strip().splitlines()[0]
+        # utf-8-sig: tolerate a BOM (PowerShell 5.1's `-Encoding UTF8` writes one)
+        target = pointer.read_text(encoding="utf-8-sig").strip().splitlines()[0]
         if target:
             return Path(target).expanduser()
     return default_data_dir() / "config.yaml"

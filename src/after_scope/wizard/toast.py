@@ -42,9 +42,14 @@ class AnnotateToast(QWidget):
         )
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setObjectName("annotateToast")
+        from .ui import tokens
+        from .ui.tokens import active
+
+        p = active()
         self.setStyleSheet(
-            "#annotateToast { background: #ffffff; border: 1px solid #7fa8d0;"
-            " border-radius: 8px; }"
+            f"#annotateToast {{ background: {p.surface};"
+            f" border: 1px solid {p.border_strong};"
+            f" border-radius: {tokens.R_LG}px; }}"
         )
 
         v = QVBoxLayout(self)
@@ -60,7 +65,10 @@ class AnnotateToast(QWidget):
                     line.addWidget(thumb)
             name = r["current_path"].rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
             tags = " / ".join(t for t in (self._exp_name(r), r["strain"], r["condition"]) if t)
-            label = QLabel(f"<b>{name}</b><br><span style='color:#555'>{tags or 'untagged'}</span>")
+            label = QLabel(
+                f"<b>{name}</b><br>"
+                f"<span style='color:{p.text_muted}'>{tags or 'untagged'}</span>"
+            )
             line.addWidget(label, stretch=1)
             v.addLayout(line)
         if len(rows) > 4:
@@ -150,7 +158,10 @@ class AnnotateToast(QWidget):
 def run_toast(ctx: AppContext, session_id: int, file_ids: list[int]) -> int:
     import sys
 
+    from .ui.theme import apply_theme
+
     app = QApplication.instance() or QApplication(sys.argv[:1])
+    apply_theme(app, mode=ctx.config.ui.theme)
     toast = AnnotateToast(ctx, session_id, file_ids, ctx.config.annotate.timeout_seconds)
     toast.destroyed.connect(app.quit)
     toast.show_in_corner()

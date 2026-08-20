@@ -38,9 +38,9 @@ def test_migration_0002_upgrades_v1_db(tmp_path):
         conn.execute("PRAGMA user_version = 1")
 
     applied = apply_migrations(conn)
-    assert applied == ["0002_session_plan.sql"]
+    assert applied == ["0002_session_plan.sql", "0003_planned_imaging.sql"]
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(sessions)")}
-    assert {"planned_experiment_id", "planned_strain", "planned_dir"} <= cols
+    assert {"planned_experiment_id", "planned_strain", "planned_dir", "planned_imaging"} <= cols
     conn.close()
 
 

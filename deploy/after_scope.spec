@@ -8,7 +8,6 @@ from PyInstaller.utils.hooks import collect_data_files
 
 datas = [
     ("../src/after_scope/db/schema", "after_scope/db/schema"),
-    ("../src/after_scope/wizard/style.qss", "after_scope/wizard"),
     ("../src/after_scope/report/templates", "after_scope/report/templates"),
 ]
 datas += collect_data_files("pylibCZIrw")
@@ -16,7 +15,7 @@ datas += collect_data_files("pylibCZIrw")
 hidden = ["pylibCZIrw", "czifile", "pystray", "PIL", "win32api"]
 
 a = Analysis(
-    ["../src/after_scope/__main__.py"],
+    ["launcher.py"],
     pathex=["../src"],
     datas=datas,
     hiddenimports=hidden,

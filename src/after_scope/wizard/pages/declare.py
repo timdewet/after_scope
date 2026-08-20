@@ -3,6 +3,11 @@
 Optional: declaring what you're about to image lets the tool auto-tag every file as
 it lands, pre-create the scratch session folder, and turn the end-of-session wizard
 into a quick review.
+
+Structured after common bioimaging metadata practice (REMBI): the *biological
+sample* (strain, condition/treatment, preparation) is captured separately from
+the *imaging plan* (modality, objective, timing). Chips are quick-input that
+compose into plain-text canonical fields — free typing always works.
 """
 
 from __future__ import annotations
@@ -10,9 +15,10 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
-    QFormLayout,
+    QCompleter,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -22,50 +28,109 @@ from PySide6.QtWidgets import (
 from ...db import repo
 from ...metadata.naming import build_context, sanitize_token
 from ...util import now_iso
+from ..ui.widgets import ChipGroup, SectionCard
 from .base import WizardPage
 
 log = logging.getLogger(__name__)
 
+CONDITION_CHIPS = ["RT", "30C", "37C", "aerobic", "hypoxia"]
+PREP_CHIPS = ["agarose pad", "1.5H coverslip", "glass-bottom dish", "fixed slide"]
+MODALITY_CHIPS = ["brightfield", "phase", "fluorescence", "z-stack", "timelapse", "tiling"]
+OBJECTIVE_CHIPS = ["10x", "40x", "63x", "100x oil"]
+
+
+def _completer(values: list[str]) -> QCompleter:
+    completer = QCompleter(values)
+    completer.setCaseSensitivity(Qt.CaseInsensitive)
+    return completer
+
 
 class ExperimentPage(WizardPage):
     title = "What are you imaging today?"
+    short = "Plan"
 
     def build(self) -> None:
         hint = QLabel(
-            "Optional, but worth 30 seconds: files get tagged automatically as you "
-            "save them, and a session folder is created for you to save into."
+            "Optional — 30 seconds here tags every file automatically as you save it."
         )
-        hint.setWordWrap(True)
-        hint.setObjectName("itemHelp")
+        hint.setObjectName("caption")
         self.layout_.addWidget(hint)
 
-        form = QFormLayout()
+        conn = self.state.conn
+        columns = QHBoxLayout()
+        columns.setSpacing(16)
+
+        # -- biological sample ------------------------------------------------
+        bio = SectionCard(
+            "Biological sample", "What is on the stage — strain, treatment, prep."
+        )
         self.experiment = QComboBox()
         self.experiment.setEditable(True)
-        self.experiment.addItems([""] + repo.list_experiment_names(self.state.conn))
+        self.experiment.addItems([""] + repo.list_experiment_names(conn))
+        bio.add_field("EXPERIMENT", self.experiment)
+
         self.strain = QLineEdit()
         self.strain.setPlaceholderText("e.g. MSM155")
+        self.strain.setCompleter(_completer(repo.recent_file_values(conn, "strain")))
+        recent_strains = repo.recent_file_values(conn, "strain", limit=4)
+        widgets = [self.strain]
+        if recent_strains:
+            widgets.append(ChipGroup(recent_strains, target=self.strain))
+        bio.add_field("STRAIN(S)", *widgets)
+
         self.condition = QLineEdit()
-        self.condition.setPlaceholderText("e.g. 37C, +INH 2xMIC")
+        self.condition.setPlaceholderText("temperature, drug + concentration…")
+        self.condition.setCompleter(_completer(repo.recent_file_values(conn, "condition")))
+        recent_conditions = [
+            v for v in repo.recent_file_values(conn, "condition", limit=3)
+            if v not in CONDITION_CHIPS
+        ]
+        bio.add_field(
+            "CONDITION / TREATMENT",
+            self.condition,
+            ChipGroup(CONDITION_CHIPS + recent_conditions, target=self.condition),
+        )
+
         self.coverslip = QLineEdit()
-        self.coverslip.setPlaceholderText("e.g. 1.5H, agarose pad")
+        self.coverslip.setPlaceholderText("sample preparation…")
+        bio.add_field(
+            "PREPARATION",
+            self.coverslip,
+            ChipGroup(PREP_CHIPS, target=self.coverslip, exclusive=True),
+        )
+        bio.body.addStretch(1)
+
+        # -- imaging plan ------------------------------------------------------
+        imaging = SectionCard(
+            "Imaging plan",
+            "How you'll acquire — actual optics are read from each CZI at save.",
+        )
+        self.imaging = QLineEdit()
+        self.imaging.setPlaceholderText("modality, objective, interval…")
+        imaging.add_field(
+            "MODALITY", self.imaging, ChipGroup(MODALITY_CHIPS, target=self.imaging)
+        )
+        imaging.add_field(
+            "OBJECTIVE", ChipGroup(OBJECTIVE_CHIPS, target=self.imaging, exclusive=True)
+        )
         self.notes = QLineEdit()
-        form.addRow("Experiment:", self.experiment)
-        form.addRow("Strain(s):", self.strain)
-        form.addRow("Condition:", self.condition)
-        form.addRow("Coverslip / prep:", self.coverslip)
-        form.addRow("Notes:", self.notes)
-        self.layout_.addLayout(form)
+        self.notes.setPlaceholderText("anything else worth remembering")
+        imaging.add_field("NOTES", self.notes)
+        imaging.body.addStretch(1)
+
+        columns.addWidget(bio, stretch=1)
+        columns.addWidget(imaging, stretch=1)
+        self.layout_.addLayout(columns)
 
         row = QHBoxLayout()
-        self.same_btn = QPushButton("Same as my last session")
+        self.same_btn = QPushButton("↺  Same as my last session")
         self.same_btn.clicked.connect(self._prefill_last)
         row.addWidget(self.same_btn)
         row.addStretch(1)
         self.layout_.addLayout(row)
 
         self.dir_label = QLabel("")
-        self.dir_label.setObjectName("itemHelp")
+        self.dir_label.setObjectName("caption")
         self.dir_label.setWordWrap(True)
         self.layout_.addWidget(self.dir_label)
         self.layout_.addStretch(1)
@@ -86,6 +151,10 @@ class ExperimentPage(WizardPage):
         self.strain.setText(last["planned_strain"] or "")
         self.condition.setText(last["planned_condition"] or "")
         self.coverslip.setText(last["planned_coverslip"] or "")
+        try:
+            self.imaging.setText(last["planned_imaging"] or "")
+        except (KeyError, IndexError):
+            pass  # row predates the planned_imaging column
 
     def validate(self) -> str | None:
         return None  # declaring is optional; empty = "not sure yet"
@@ -96,8 +165,9 @@ class ExperimentPage(WizardPage):
         strain = self.strain.text().strip() or None
         condition = self.condition.text().strip() or None
         coverslip = self.coverslip.text().strip() or None
+        imaging = self.imaging.text().strip() or None
         notes = self.notes.text().strip() or None
-        if not any((experiment, strain, condition, coverslip, notes)):
+        if not any((experiment, strain, condition, coverslip, imaging, notes)):
             return  # skipped
 
         experiment_id = None
@@ -131,6 +201,7 @@ class ExperimentPage(WizardPage):
             conn, self.state.session_id,
             experiment_id=experiment_id, strain=strain, condition=condition,
             coverslip=coverslip, notes=notes, planned_dir=planned_dir,
+            imaging=imaging,
         )
         repo.audit(
             conn, "experiment_declared",

@@ -11,11 +11,16 @@
 
 param(
     [Parameter(Mandatory = $true)] [string]$ConfigPath,
-    [string]$BundleDir = (Join-Path $PSScriptRoot "..\..\dist\AfterScope"),
+    [string]$BundleDir = "",
     [string]$InstallDir = "C:\Program Files\AfterScope",
     [string]$DataDir = "C:\ProgramData\AfterScope"
 )
 $ErrorActionPreference = "Stop"
+
+# $PSScriptRoot is empty during param() default evaluation in some invocation
+# contexts (PS 5.1, elevated -Command wrappers) — resolve defaults here instead.
+$scriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $BundleDir) { $BundleDir = Join-Path $scriptRoot "..\..\dist\AfterScope" }
 
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
         ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -42,14 +47,15 @@ Set-Acl $DataDir $acl
 if (-not (Test-Path $ConfigPath)) {
     Write-Host "Bootstrapping config at $ConfigPath from the example ..."
     New-Item -ItemType Directory -Force -Path (Split-Path $ConfigPath) | Out-Null
-    Copy-Item (Join-Path $PSScriptRoot "..\..\config\config.example.yaml") $ConfigPath
+    Copy-Item (Join-Path $scriptRoot "..\..\config\config.example.yaml") $ConfigPath
     Write-Warning "EDIT $ConfigPath before first use (watch_dirs, dropbox root, roster)."
 }
-Set-Content -Path (Join-Path $DataDir "config.path") -Value $ConfigPath -Encoding UTF8
+# WriteAllText writes BOM-less UTF-8 (PS 5.1's `Set-Content -Encoding UTF8` adds a BOM)
+[IO.File]::WriteAllText((Join-Path $DataDir "config.path"), $ConfigPath)
 
 # 4. scheduled task
 Write-Host "Registering scheduled task AfterScopeWatchdog ..."
-$xml = Get-Content (Join-Path $PSScriptRoot "AfterScopeWatchdog.xml") -Raw
+$xml = Get-Content (Join-Path $scriptRoot "AfterScopeWatchdog.xml") -Raw
 $xml = $xml -replace "C:\\Program Files\\AfterScope\\AfterScope.exe",
                      ($InstallDir + "\AfterScope.exe").Replace("\", "\\")
 Register-ScheduledTask -TaskName "AfterScopeWatchdog" -Xml $xml -Force | Out-Null

@@ -36,7 +36,7 @@ def test_basic_name_and_dest(tmp_path):
     name = propose_filename(TEMPLATE, c, tmp_path, ".czi", set())
     assert name == "20260814_TdW_efflux-timelapse_MSM155_37C_001.czi"
     dest = render_dest_dir(DEST, c, tmp_path)
-    assert str(dest).endswith("MicroscopeData/2026/TdW/20260814_efflux-timelapse")
+    assert dest.as_posix().endswith("MicroscopeData/2026/TdW/20260814_efflux-timelapse")
 
 
 def test_missing_tokens_collapse():

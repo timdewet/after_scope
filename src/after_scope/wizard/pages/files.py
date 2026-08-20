@@ -15,11 +15,13 @@ from PySide6.QtWidgets import (
 
 from ...db import repo
 from ..models import SessionFilesModel
+from ..ui.widgets import EmptyState
 from .base import WizardPage
 
 
 class FilesPage(WizardPage):
     title = "Your images from this session"
+    short = "Images"
 
     def build(self) -> None:
         self.model = SessionFilesModel(self.state.conn, self.state.session_id)
@@ -31,8 +33,8 @@ class FilesPage(WizardPage):
         self.table.resizeColumnsToContents()
         self.layout_.addWidget(self.table, stretch=1)
 
-        box = QGroupBox("Apply to selected rows (or all, when nothing is selected)")
-        bar = QHBoxLayout(box)
+        self.apply_box = QGroupBox("Apply to selected rows (or all, when nothing is selected)")
+        bar = QHBoxLayout(self.apply_box)
         self.experiment = QLineEdit()
         self.experiment.setPlaceholderText("Experiment")
         self.experiment.setCompleter(
@@ -40,17 +42,24 @@ class FilesPage(WizardPage):
         )
         self.strain = QLineEdit()
         self.strain.setPlaceholderText("Strain(s)")
+        self.strain.setCompleter(QCompleter(repo.recent_file_values(self.state.conn, "strain")))
         self.condition = QLineEdit()
         self.condition.setPlaceholderText("Condition / treatment")
+        self.condition.setCompleter(
+            QCompleter(repo.recent_file_values(self.state.conn, "condition"))
+        )
         self.coverslip = QLineEdit()
-        self.coverslip.setPlaceholderText("Coverslip / prep")
+        self.coverslip.setPlaceholderText("Preparation")
+        self.coverslip.setCompleter(
+            QCompleter(repo.recent_file_values(self.state.conn, "coverslip"))
+        )
         self.notes = QLineEdit()
         self.notes.setPlaceholderText("Notes")
         apply_btn = QPushButton("Apply")
         apply_btn.clicked.connect(self._apply)
         for w in (self.experiment, self.strain, self.condition, self.coverslip, self.notes, apply_btn):
             bar.addWidget(w)
-        self.layout_.addWidget(box)
+        self.layout_.addWidget(self.apply_box)
         self.hint = QLabel(
             "Tip: double-click any cell to edit one file; tick Junk for focus tests "
             "and misfires — junk stays logged but isn't renamed or moved."
@@ -58,14 +67,24 @@ class FilesPage(WizardPage):
         self.hint.setWordWrap(True)
         self.layout_.addWidget(self.hint)
 
+        self.empty_state = EmptyState(
+            "No new image files were detected this session.\n"
+            "If you saved somewhere unusual, tell the lab manager so the "
+            "watched folders can be updated."
+        )
+        self.layout_.addWidget(self.empty_state)
+        self.empty_state.hide()
+
     def refresh(self) -> None:
         self.model.reload()
         self.table.resizeColumnsToContents()
-        if not self.model.rows:
-            self.hint.setText(
-                "No new image files were detected this session. If you saved somewhere "
-                "unusual, tell the lab manager so the watched folders can be updated."
-            )
+        empty = not self.model.rows
+        # nothing captured: the table and tagging bar are noise — show only
+        # the empty state and let Next move on
+        self.table.setVisible(not empty)
+        self.apply_box.setVisible(not empty)
+        self.hint.setVisible(not empty)
+        self.empty_state.setVisible(empty)
 
     def _apply(self) -> None:
         selected = sorted({i.row() for i in self.table.selectionModel().selectedRows()})

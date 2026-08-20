@@ -12,6 +12,7 @@ from .base import WizardPage
 
 class NamingPage(WizardPage):
     title = "Filing your images"
+    short = "Filing"
 
     def build(self) -> None:
         self.info = QLabel()

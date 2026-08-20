@@ -87,8 +87,17 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _run_watchdog(ctx) -> int:
-    from .watchdog.service import WatchdogService
+    from datetime import datetime
+
+    from .watchdog.service import WatchdogService, read_pause_until
     from .watchdog.single_instance import SingleInstance
+
+    until = read_pause_until(ctx.paths)
+    if until is not None and until > datetime.now():
+        # tray-requested pause: the keep-alive task keeps relaunching us, and we
+        # keep declining until the timestamp passes
+        print(f"AfterScope paused until {until:%H:%M} — exiting.")
+        return 0
 
     guard = SingleInstance("AfterScopeWatchdog", ctx.paths.data_dir)
     if not guard.acquire():
@@ -97,6 +106,7 @@ def _run_watchdog(ctx) -> int:
     try:
         # a leftover stop.flag from an update must not stop the fresh instance
         ctx.paths.stop_flag.unlink(missing_ok=True)
+        ctx.paths.pause_until.unlink(missing_ok=True)
         WatchdogService(ctx).run()
         return 0
     finally:
@@ -110,7 +120,12 @@ def _run_doctor(ctx) -> int:
         checks.append((name, ok, detail))
 
     cfg = ctx.config
-    check("config loads", True, str(ctx.config_path))
+    check(
+        "config loads",
+        not cfg.loaded_from_cache,
+        str(ctx.config_path)
+        + (" — LIVE FILE BROKEN, running on cached last-known-good!" if cfg.loaded_from_cache else ""),
+    )
     check("data dir writable", _writable(ctx.paths.data_dir), str(ctx.paths.data_dir))
     try:
         ctx.db.execute("SELECT 1")

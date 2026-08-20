@@ -55,7 +55,7 @@ def test_build_pages_composition(ctx):
     ctx.config.dust.required = "prompt"
 
     names = [type(p).__name__ for p in build_pages(WizardState(ctx=ctx, reason="start", session_id=sid))]
-    assert names == ["UserPage", "ExperimentPage", "ArrivalPage", "IssuesPage"]
+    assert names == ["UserPage", "ExperimentPage", "ArrivalPage", "IssuesPage", "SavingPage"]
 
     ctx.config.declare.enabled = False
     names = [type(p).__name__ for p in build_pages(WizardState(ctx=ctx, reason="start", session_id=sid))]
@@ -69,7 +69,7 @@ def test_build_pages_composition(ctx):
     old = sm.open(zen_pid=0)
     sm.close_for_zen_exit(old, 0)
     names = [type(p).__name__ for p in build_pages(WizardState(ctx=ctx, reason="start", session_id=sid))]
-    assert names[-1] == "NagOfferPage"
+    assert names[-2] == "NagOfferPage" and names[-1] == "SavingPage"
 
 
 def test_end_of_session_auto_flow(ctx, tmp_path):

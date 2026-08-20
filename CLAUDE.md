@@ -5,13 +5,20 @@ End-of-session compliance & metadata tool for the lab's shared Zeiss microscope
 
 ## State (as of 2026-08-14)
 
-Built and verified on macOS: 89 tests green (`pytest`), including an end-to-end
-simulated session (`tests/e2e/`). **Nothing has run on real Windows hardware yet** —
-that is the next milestone. The Windows-specific code paths that need first-run
-verification: `watchdog/win32_watch.py` (exit codes via OpenProcess),
-`watchdog/idle.py` (GetLastInputInfo), `watchdog/tray.py` (pystray),
-`watchdog/single_instance.py` (named mutex), and everything in `deploy/windows/`.
-The first-deploy smoke checklist is at the bottom of README.md.
+Verified on Windows 10: 89 tests green (`pytest`), and the simulate loop ran
+end-to-end on real hardware — tray icon (pystray), GetLastInputInfo idle monitor,
+named-mutex single instance, Win32 exit codes (clean vs taskkill crash), CZI
+ingest + toast, and the copy→verify→delete move into the Dropbox tree.
+`config/config.simulate.win.yaml` is the simulate profile with the tray enabled.
+Still needing eyes-on: tray menu actions (takeover/declare), idle→whoami flow,
+and the deploy scripts (`deploy/windows/`) — smoke checklist at the bottom of
+README.md. Dev-only quirk: the venv `python.exe` is a launcher, so cmdline-marker
+detection finds the child interpreter; irrelevant for the real `Zen.exe`.
+
+Wizard/toast styling is a token-based design system in `wizard/ui/`
+(`tokens.py` palettes light+dark, `theme.py` generates the whole QSS,
+`stepper.py` step indicator) — ported from MycoMorph's GUI. No `.qss` files;
+change tokens, not widget stylesheets.
 
 ## Architecture in one paragraph
 
@@ -57,15 +64,33 @@ after-scope --config <cfg> doctor                               # env validation
 On Windows, build + install: `deploy/build.ps1`, then `deploy/windows/install.ps1`
 (admin; registers the Task Scheduler keep-alive and the config pointer file).
 
+## Deployed (2026-08-14)
+
+Installed on the scope PC: bundle at `C:\Program Files\AfterScope`, data at
+`C:\ProgramData\AfterScope`, Task Scheduler keep-alive `AfterScopeWatchdog`
+(logon trigger + 5-min repeat), master config at
+`C:\Users\User\MMRU Dropbox\Network Data\Microscopy\AfterScope\config.yaml`
+(pointer file in ProgramData). Dropbox root is `...\Network Data\Microscopy`
+(the team-space root has a filesystem Deny ACL — top-level folders can only be
+made in the Dropbox web UI). Frozen-build fixes that must not regress:
+`deploy/launcher.py` (absolute-import entry + six/shiboken import guard) and
+BOM-less `config.path` (`paths.py` reads utf-8-sig; install.ps1 writes via
+`[IO.File]::WriteAllText`). Updates: build, then `deploy/windows/update.ps1`.
+
+**Running (2026-08-20).** To pause: tray menu → Pause, or exit the watchdog and
+`Disable-ScheduledTask -TaskName AfterScopeWatchdog` (admin). All work is on the
+`windows-deploy` branch (PR #1); the deployed bundle matches its head.
+Config gotcha: YAML parses bare `off`/`on` as booleans — literal fields coerce
+them now, but quote `'off'` in configs anyway. The last-known-good config cache
+is keyed by config path (a test config once poisoned the global cache and sent
+wizards to a pytest temp DB — silent and nasty; doctor now flags fallback).
+
 ## Next steps (in order)
 
-1. On the scope PC (or any Windows box): clone, venv, `pytest` — confirm the suite
-   passes on Windows (path handling, Qt offscreen).
-2. Run the simulate loop on Windows (fake_zen + simulate_acquisition) to verify the
-   real tray icon, idle monitor, and toast focus behavior.
-3. `deploy/build.ps1` → `install.ps1` on the scope PC; walk the README smoke checklist.
-4. Config for production: real `watch_dirs`, Dropbox root, roster, approved solvent +
-   nudge cadence, create the ZEN preset `AfterScope_DustRef` (100x brightfield,
-   `dustref_` prefix), one-time `_legacy/` move via Dropbox web UI.
-5. v1.1 backlog: migration wizard GUI (manifest + ingest already in `migrate/`),
+1. Remaining smoke items (README checklist): real ZEN open/close/crash cycle,
+   wizard-over-ZEN-splash, sleep/resume, non-admin user, Defender quiet for a week
+   (consider `Add-MpPreference -ExclusionPath 'C:\Program Files\AfterScope'`).
+2. Create the ZEN preset `AfterScope_DustRef` (100x brightfield, `dustref_` prefix);
+   one-time `_legacy/` move via Dropbox web UI; extend the roster as users join.
+3. v1.1 backlog: migration wizard GUI (manifest + ingest already in `migrate/`),
    dashboard trend charts, per-file user reassignment; v1.2: ZEN API dust auto-snap.

@@ -9,6 +9,7 @@ from ..state import WizardState
 
 class WizardPage(QWidget):
     title = ""
+    short = ""  # stepper label; falls back to title when empty
 
     def __init__(self, state: WizardState) -> None:
         super().__init__()

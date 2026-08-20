@@ -58,7 +58,33 @@ class WatchdogTray:
             pystray.MenuItem("Set experiment details…", self._declare),
             pystray.MenuItem("Open dashboard", self._dashboard),
             pystray.MenuItem("Open exports folder", self._exports),
+            pystray.MenuItem(
+                "Pause AfterScope",
+                pystray.Menu(
+                    pystray.MenuItem("For 30 minutes", self._pause(minutes=30)),
+                    pystray.MenuItem("For 2 hours", self._pause(hours=2)),
+                    pystray.MenuItem("Until tomorrow 06:00", self._pause(tomorrow=True)),
+                ),
+            ),
         )
+
+    def _pause(self, minutes: int = 0, hours: int = 0, tomorrow: bool = False):
+        def handler(icon, item) -> None:
+            from datetime import datetime, timedelta
+
+            from .service import request_pause
+
+            if tomorrow:
+                until = (datetime.now() + timedelta(days=1)).replace(
+                    hour=6, minute=0, second=0, microsecond=0
+                )
+            else:
+                until = datetime.now() + timedelta(minutes=minutes, hours=hours)
+            log.info("Tray: pause requested until %s", until)
+            request_pause(self.service.ctx.paths, until)
+            self.service.running = False  # exit cleanly; keep-alive honours the pause
+
+        return handler
 
     def _takeover(self, icon, item) -> None:
         log.info("Tray: takeover requested")

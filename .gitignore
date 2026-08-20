@@ -12,3 +12,5 @@ dist/
 # local dev/simulate state
 sim_home/
 *.log
+
+AfterScope-*.zip

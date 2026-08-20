@@ -21,6 +21,7 @@ from .base import WizardPage
 
 class UserPage(WizardPage):
     title = "Who's using the microscope?"
+    short = "Who"
 
     def build(self) -> None:
         self.selected_uid: int | None = None
@@ -49,6 +50,8 @@ class UserPage(WizardPage):
         self.layout_.addStretch(1)
 
     def refresh(self) -> None:
+        if self.state.is_end_of_session:
+            self.heading.setText("Who was using the microscope?")
         # rebuild roster buttons (recent users first)
         while self.roster_grid.count():
             item = self.roster_grid.takeAt(0)
@@ -57,11 +60,14 @@ class UserPage(WizardPage):
         users = repo.recent_users(self.state.conn, limit=6)
         seen = {u["id"] for u in users}
         users += [u for u in repo.list_users(self.state.conn) if u["id"] not in seen]
+        self._roster_buttons = {}
         for i, user in enumerate(users):
             btn = QPushButton(f"{user['full_name']}  ({user['initials']})")
             btn.setObjectName("rosterButton")
+            btn.setCheckable(True)
             btn.clicked.connect(lambda _=False, uid=user["id"], name=user["full_name"]:
                                 self._pick(uid, name))
+            self._roster_buttons[user["id"]] = btn
             self.roster_grid.addWidget(btn, i // 3, i % 3)
         # session may already carry a user (pre-use identified them)
         row = repo.get_session(self.state.conn, self.state.session_id)
@@ -69,11 +75,17 @@ class UserPage(WizardPage):
             user = repo.get_user(self.state.conn, row["user_id"])
             if user:
                 self._pick(user["id"], user["full_name"], method=row["identify_method"] or "roster")
+        elif self.state.is_end_of_session and self.selected_uid is None and users:
+            # end-of-session with no identity on record: pre-select the most
+            # recent user so confirming is one tap (still freely changeable)
+            self._pick(users[0]["id"], users[0]["full_name"])
 
     def _pick(self, uid: int, name: str, method: str = "roster") -> None:
         self.selected_uid = uid
         self.method = method
         self.selected_label.setText(f"Selected: {name}")
+        for buid, btn in getattr(self, "_roster_buttons", {}).items():
+            btn.setChecked(buid == uid)
 
     def _add_new(self) -> None:
         name = self.new_name.text().strip()
@@ -113,6 +125,7 @@ class UserPage(WizardPage):
 
 class WhoamiPage(WizardPage):
     title = "Who's at the microscope?"
+    short = "Who"
 
     def build(self) -> None:
         self.info = QLabel()

@@ -178,14 +178,28 @@ def set_session_plan(
     coverslip: str | None,
     notes: str | None,
     planned_dir: str | None,
+    imaging: str | None = None,
 ) -> None:
     with conn:
         conn.execute(
             """UPDATE sessions SET planned_experiment_id=?, planned_strain=?,
                                    planned_condition=?, planned_coverslip=?,
-                                   planned_notes=?, planned_dir=?
+                                   planned_notes=?, planned_dir=?, planned_imaging=?
                WHERE id=?""",
-            (experiment_id, strain, condition, coverslip, notes, planned_dir, session_id),
+            (experiment_id, strain, condition, coverslip, notes, planned_dir,
+             imaging, session_id),
+        )
+
+
+def set_session_purpose(conn: sqlite3.Connection, session_id: int, purpose: str) -> None:
+    """Record a quick session purpose (viewing / analysis / quick look) without
+    touching the rest of the plan; existing notes are preserved."""
+    with conn:
+        conn.execute(
+            """UPDATE sessions
+               SET planned_notes = COALESCE(NULLIF(planned_notes, ''), ?)
+               WHERE id=?""",
+            (purpose, session_id),
         )
 
 
@@ -303,6 +317,23 @@ def list_experiment_names(conn: sqlite3.Connection, limit: int = 50) -> list[str
         "SELECT name FROM experiments ORDER BY id DESC LIMIT ?", (limit,)
     ).fetchall()
     return [r["name"] for r in rows]
+
+
+_RECENT_VALUE_COLUMNS = {"strain", "condition", "coverslip"}
+
+
+def recent_file_values(conn: sqlite3.Connection, column: str, limit: int = 8) -> list[str]:
+    """Most recently used distinct values of a files column — feeds the quick-pick
+    chips and completers in the wizard. Column name is whitelisted (no user input)."""
+    if column not in _RECENT_VALUE_COLUMNS:
+        raise ValueError(f"unsupported column: {column}")
+    rows = conn.execute(
+        f"""SELECT {column} AS v, MAX(id) AS last_id FROM files
+            WHERE {column} IS NOT NULL AND {column} != ''
+            GROUP BY {column} ORDER BY last_id DESC LIMIT ?""",
+        (limit,),
+    ).fetchall()
+    return [r["v"] for r in rows]
 
 
 # --- files -------------------------------------------------------------------------
