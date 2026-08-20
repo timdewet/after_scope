@@ -77,11 +77,13 @@ made in the Dropbox web UI). Frozen-build fixes that must not regress:
 BOM-less `config.path` (`paths.py` reads utf-8-sig; install.ps1 writes via
 `[IO.File]::WriteAllText`). Updates: build, then `deploy/windows/update.ps1`.
 
-**Currently STOPPED (2026-08-15):** the watchdog was exited and the
-`AfterScopeWatchdog` scheduled task disabled for a development pause. To resume,
-from an admin PowerShell: `Enable-ScheduledTask -TaskName AfterScopeWatchdog;
-Start-ScheduledTask -TaskName AfterScopeWatchdog`. All work to date is on the
+**Running (2026-08-20).** To pause: tray menu → Pause, or exit the watchdog and
+`Disable-ScheduledTask -TaskName AfterScopeWatchdog` (admin). All work is on the
 `windows-deploy` branch (PR #1); the deployed bundle matches its head.
+Config gotcha: YAML parses bare `off`/`on` as booleans — literal fields coerce
+them now, but quote `'off'` in configs anyway. The last-known-good config cache
+is keyed by config path (a test config once poisoned the global cache and sent
+wizards to a pytest temp DB — silent and nasty; doctor now flags fallback).
 
 ## Next steps (in order)
 

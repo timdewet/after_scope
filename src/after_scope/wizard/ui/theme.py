@@ -182,19 +182,26 @@ QPushButton#nextButton:hover {{ background: {p.primary_hover}; border-color: {p.
 QPushButton#nextButton:pressed {{ background: {p.primary_pressed}; }}
 QPushButton#nextButton:focus {{ border: 2px solid {p.focus_ring}; }}
 
+/* big choice buttons: outlined until picked, filled once picked */
 QPushButton#bigYes {{
-    background: {p.success}; border: 1px solid {p.success};
-    color: {p.on_primary}; font-size: {t.FS_H2}px; font-weight: {t.FW_SEMIBOLD};
+    background: {p.surface}; border: 2px solid {p.success};
+    color: {p.success}; font-size: {t.FS_H2}px; font-weight: {t.FW_SEMIBOLD};
     padding: {t.S4}px {t.S7}px;
 }}
-QPushButton#bigYes:hover {{ background: {p.success_hover}; border-color: {p.success_hover}; }}
+QPushButton#bigYes:hover {{ background: {p.surface_alt}; }}
+QPushButton#bigYes:checked {{
+    background: {p.success}; border-color: {p.success}; color: {p.on_primary};
+}}
 
 QPushButton#bigNo {{
-    background: {p.danger}; border: 1px solid {p.danger};
-    color: {p.on_primary}; font-size: {t.FS_H2}px; font-weight: {t.FW_SEMIBOLD};
+    background: {p.surface}; border: 2px solid {p.danger};
+    color: {p.danger}; font-size: {t.FS_H2}px; font-weight: {t.FW_SEMIBOLD};
     padding: {t.S4}px {t.S7}px;
 }}
-QPushButton#bigNo:hover {{ background: #b91c1c; border-color: #b91c1c; }}
+QPushButton#bigNo:hover {{ background: {p.surface_alt}; }}
+QPushButton#bigNo:checked {{
+    background: {p.danger}; border-color: {p.danger}; color: {p.on_primary};
+}}
 
 QPushButton#rosterButton {{
     font-size: {t.FS_H2}px; padding: {t.S4}px {t.S5}px;
@@ -202,6 +209,10 @@ QPushButton#rosterButton {{
     border-radius: {t.R_LG}px;
 }}
 QPushButton#rosterButton:hover {{ border-color: {p.primary}; color: {p.primary}; }}
+QPushButton#rosterButton:checked {{
+    border: 2px solid {p.primary}; background: {p.selection};
+    color: {p.primary}; font-weight: {t.FW_BOLD};
+}}
 
 QPushButton#skipLink {{
     background: transparent; border: none;

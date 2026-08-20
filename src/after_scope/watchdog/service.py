@@ -208,7 +208,7 @@ class WatchdogService:
         if row and row["planned_dir"]:
             self.scanner.add_extra_dir(row["planned_dir"])
 
-    def _scan_if_due(self, now: float) -> None:
+    def _scan_if_due(self, now: float, final: bool = False) -> None:
         if now - self._last_scan < self.cfg.scan.seconds:
             return
         self._last_scan = now
@@ -216,7 +216,7 @@ class WatchdogService:
             return
         session = repo.get_session(self.ctx.db, self.session_id)
         toast_ids: list[int] = []
-        for path in self.scanner.sweep(self._session_start_epoch):
+        for path in self.scanner.sweep(self._session_start_epoch, final=final):
             try:
                 file_id = ingest_stable_file(
                     self.ctx.db, self.cfg, self.ctx.paths, self.session_id, path
@@ -236,7 +236,7 @@ class WatchdogService:
             row = repo.get_file(self.ctx.db, file_id)
             if row is not None and row["status"] != "dust_ref":
                 toast_ids.append(file_id)
-        if toast_ids and self.cfg.annotate.mode == "toast":
+        if toast_ids and not final and self.cfg.annotate.mode == "toast":
             self.spawn_toast(self.ctx, self.session_id, toast_ids)
 
     def _do_handover(self) -> None:
@@ -252,9 +252,10 @@ class WatchdogService:
 
     def _finalize_zen_exit(self) -> None:
         exit_code = self.watcher.exit_code(self.proc) if self.proc else None
-        # final sweep so files saved moments before closing are captured
+        # final sweep so files saved moments before closing are captured;
+        # final=True admits files the periodic sweeps never got a second look at
         self._last_scan = 0.0
-        self._scan_if_due(self.clock())
+        self._scan_if_due(self.clock(), final=True)
         sid = self.session_id
         self.proc = None
         if sid is None:

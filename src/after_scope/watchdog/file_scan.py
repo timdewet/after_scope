@@ -74,8 +74,13 @@ class AcquisitionScanner:
         except OSError:
             return False
 
-    def sweep(self, session_start_epoch: float) -> list[Path]:
-        """Returns files that became stable this sweep (each reported exactly once)."""
+    def sweep(self, session_start_epoch: float, final: bool = False) -> list[Path]:
+        """Returns files that became stable this sweep (each reported exactly once).
+
+        final=True is the at-exit sweep: ZEN's process is gone, so nothing can
+        still be writing — first-sighted files are admitted on the shared-read
+        check alone instead of waiting for a second sweep that will never come.
+        """
         cutoff = session_start_epoch - self.slack
         newly_stable: list[Path] = []
         for root, recursive in self.watch_dirs + [(d, True) for d in self.extra_dirs]:
@@ -89,9 +94,19 @@ class AcquisitionScanner:
                 self.last_file_mtime = max(self.last_file_mtime, st.st_mtime)
                 tracked = self._tracked.get(entry.path)
                 if tracked is None:
-                    self._tracked[entry.path] = _Tracked(st.st_size, st.st_mtime)
+                    tracked = _Tracked(st.st_size, st.st_mtime)
+                    self._tracked[entry.path] = tracked
+                    if final and self._readable(entry.path):
+                        tracked.reported = True
+                        newly_stable.append(Path(entry.path))
                     continue
                 if tracked.reported:
+                    continue
+                if final:
+                    tracked.size, tracked.mtime = st.st_size, st.st_mtime
+                    if self._readable(entry.path):
+                        tracked.reported = True
+                        newly_stable.append(Path(entry.path))
                     continue
                 if st.st_size == tracked.size and st.st_mtime == tracked.mtime:
                     tracked.stable_sweeps += 1

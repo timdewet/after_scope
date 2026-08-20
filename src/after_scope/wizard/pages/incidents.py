@@ -37,10 +37,12 @@ class IncidentPage(WizardPage):
         self.ok_btn = QPushButton("No problems 👍")
         self.ok_btn.setObjectName("bigYes")
         self.ok_btn.setMinimumHeight(64)
+        self.ok_btn.setCheckable(True)
         self.ok_btn.clicked.connect(lambda: self._set_choice(False))
         self.problem_btn = QPushButton("Something went wrong…")
         self.problem_btn.setObjectName("bigNo")
         self.problem_btn.setMinimumHeight(64)
+        self.problem_btn.setCheckable(True)
         self.problem_btn.clicked.connect(lambda: self._set_choice(True))
         gate.addWidget(self.ok_btn, stretch=1)
         gate.addWidget(self.problem_btn, stretch=1)
@@ -79,8 +81,8 @@ class IncidentPage(WizardPage):
     def _set_choice(self, problem: bool) -> None:
         self.choice = problem
         self.form_box.setVisible(problem)
-        self.ok_btn.setDown(not problem)
-        self.problem_btn.setDown(problem)
+        self.ok_btn.setChecked(not problem)
+        self.problem_btn.setChecked(problem)
 
     def refresh(self) -> None:
         for cb, _ in self._draft_checks:

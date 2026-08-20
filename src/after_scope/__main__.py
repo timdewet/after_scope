@@ -120,7 +120,12 @@ def _run_doctor(ctx) -> int:
         checks.append((name, ok, detail))
 
     cfg = ctx.config
-    check("config loads", True, str(ctx.config_path))
+    check(
+        "config loads",
+        not cfg.loaded_from_cache,
+        str(ctx.config_path)
+        + (" — LIVE FILE BROKEN, running on cached last-known-good!" if cfg.loaded_from_cache else ""),
+    )
     check("data dir writable", _writable(ctx.paths.data_dir), str(ctx.paths.data_dir))
     try:
         ctx.db.execute("SELECT 1")

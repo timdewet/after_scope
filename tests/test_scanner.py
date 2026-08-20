@@ -68,3 +68,29 @@ def test_unreadable_watch_root_is_skipped(cfg, tmp_path):
     cfg.watch_dirs[0].path = tmp_path / "does-not-exist"
     scanner = AcquisitionScanner(cfg)
     assert scanner.sweep(time.time()) == []
+
+
+def test_final_sweep_admits_first_sightings(cfg, tmp_path):
+    """A file saved after the last periodic sweep must be captured by the at-exit
+    sweep even though it was never seen before (ZEN is gone; nothing is writing)."""
+    scanner = AcquisitionScanner(cfg)
+    start = time.time() - 10
+    assert scanner.sweep(start) == []  # nothing yet
+
+    late = tmp_path / "watch" / "Snap-late.czi"
+    _touch(late)
+    # never seen before: the at-exit sweep must still capture it
+    assert scanner.sweep(start, final=True) == [late]
+    # and it is reported exactly once
+    assert scanner.sweep(start, final=True) == []
+
+
+def test_final_sweep_admits_changed_files(cfg, tmp_path):
+    """Seen once, then changed before exit: still captured at exit."""
+    scanner = AcquisitionScanner(cfg)
+    start = time.time() - 10
+    f = tmp_path / "watch" / "Snap-grow.czi"
+    _touch(f, content=b"1")
+    assert scanner.sweep(start) == []          # first sighting
+    _touch(f, content=b"22")                   # ZEN finished writing at close
+    assert scanner.sweep(start, final=True) == [f]

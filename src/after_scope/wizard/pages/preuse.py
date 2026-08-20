@@ -38,9 +38,11 @@ class ArrivalPage(WizardPage):
         self.ok_btn = QPushButton("All good 👍")
         self.ok_btn.setObjectName("bigYes")
         self.ok_btn.setMinimumHeight(64)
+        self.ok_btn.setCheckable(True)
         self.ok_btn.clicked.connect(lambda: self._set_choice(True))
         self.dirty_btn = QPushButton("I found problems…")
         self.dirty_btn.setMinimumHeight(64)
+        self.dirty_btn.setCheckable(True)
         self.dirty_btn.clicked.connect(lambda: self._set_choice(False))
         row.addWidget(self.ok_btn, stretch=1)
         row.addWidget(self.dirty_btn, stretch=1)
@@ -72,8 +74,8 @@ class ArrivalPage(WizardPage):
     def _set_choice(self, ok: bool) -> None:
         self.choice = ok
         self.detail_box.setVisible(not ok)
-        self.ok_btn.setDown(ok)
-        self.dirty_btn.setDown(not ok)
+        self.ok_btn.setChecked(ok)
+        self.dirty_btn.setChecked(not ok)
 
     def _pick_photo(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Photo", "", "Images (*.png *.jpg *.jpeg)")

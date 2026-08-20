@@ -56,6 +56,17 @@ class DropboxCfg(BaseModel):
 
 class DustCfg(BaseModel):
     required: Literal["prompt", "required", "off"] = "prompt"
+
+    @field_validator("required", mode="before")
+    @classmethod
+    def _yaml_bool(cls, v):
+        # YAML 1.1 parses bare off/on/no/yes as booleans; a lab manager writing
+        # `required: off` means the literal string
+        if v is False:
+            return "off"
+        if v is True:
+            return "required"
+        return v
     filename_prefix: str = "dustref"
     preset_hint: str = "AfterScope_DustRef"
     objective: str = "100x"
@@ -120,6 +131,15 @@ class DeclareCfg(BaseModel):
 
 class AnnotateCfg(BaseModel):
     mode: Literal["toast", "off"] = "toast"
+
+    @field_validator("mode", mode="before")
+    @classmethod
+    def _yaml_bool(cls, v):
+        if v is False:
+            return "off"
+        if v is True:
+            return "toast"
+        return v
     timeout_seconds: int = 15
 
 
@@ -159,6 +179,8 @@ class UiCfg(BaseModel):
 
 
 class AppConfig(BaseModel):
+    # set by load_config when the live file failed and the cached copy is in use
+    loaded_from_cache: bool = False
     instrument: InstrumentCfg = Field(default_factory=InstrumentCfg)
     zen: ZenCfg = Field(default_factory=ZenCfg)
     watch_dirs: list[WatchDirCfg] = Field(default_factory=list)
@@ -239,9 +261,18 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
+def _keyed_cache_path(config_path: Path) -> Path:
+    """Cache filename keyed by the config's absolute path, so a test or dev
+    config can never poison the production pointer's last-known-good copy."""
+    import hashlib
+
+    digest = hashlib.sha1(str(config_path.resolve()).lower().encode()).hexdigest()[:10]
+    return AppPaths(default_data_dir()).cache_dir / f"config.{digest}.last_good.yaml"
+
+
 def load_config(path: Path, cache_path: Path | None = None) -> AppConfig:
     """Load + validate config; fall back to the cached last-known-good copy."""
-    cache = cache_path or AppPaths(default_data_dir()).last_good_config
+    cache = cache_path or _keyed_cache_path(path)
     try:
         cfg = AppConfig.model_validate(_read_yaml(path))
         cfg.resolve_paths(path.parent)
@@ -250,6 +281,7 @@ def load_config(path: Path, cache_path: Path | None = None) -> AppConfig:
             log.error("Config %s failed to load (%s); using last-known-good %s", path, exc, cache)
             cfg = AppConfig.model_validate(_read_yaml(cache))
             cfg.resolve_paths(path.parent if path.exists() else cache.parent)
+            cfg.loaded_from_cache = True
             return cfg
         raise
     # Cache the raw file as last-known-good for next time.

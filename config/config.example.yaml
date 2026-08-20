@@ -21,7 +21,7 @@ watch_dirs:
   - { path: 'D:\MicroscopyWorking', recursive: true }
 
 scan:
-  seconds: 60
+  seconds: 15   # save-to-toast latency; the final sweep at ZEN exit catches stragglers
   file_patterns: ["*.czi"]
 
 organize:

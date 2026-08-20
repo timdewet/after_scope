@@ -60,11 +60,14 @@ class UserPage(WizardPage):
         users = repo.recent_users(self.state.conn, limit=6)
         seen = {u["id"] for u in users}
         users += [u for u in repo.list_users(self.state.conn) if u["id"] not in seen]
+        self._roster_buttons = {}
         for i, user in enumerate(users):
             btn = QPushButton(f"{user['full_name']}  ({user['initials']})")
             btn.setObjectName("rosterButton")
+            btn.setCheckable(True)
             btn.clicked.connect(lambda _=False, uid=user["id"], name=user["full_name"]:
                                 self._pick(uid, name))
+            self._roster_buttons[user["id"]] = btn
             self.roster_grid.addWidget(btn, i // 3, i % 3)
         # session may already carry a user (pre-use identified them)
         row = repo.get_session(self.state.conn, self.state.session_id)
@@ -81,6 +84,8 @@ class UserPage(WizardPage):
         self.selected_uid = uid
         self.method = method
         self.selected_label.setText(f"Selected: {name}")
+        for buid, btn in getattr(self, "_roster_buttons", {}).items():
+            btn.setChecked(buid == uid)
 
     def _add_new(self) -> None:
         name = self.new_name.text().strip()
