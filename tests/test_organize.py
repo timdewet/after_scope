@@ -98,3 +98,21 @@ def test_never_overwrites(conn, cfg, tmp_path):
     assert results[fids[0]] == "move_failed"
     assert plans[0].dst.read_bytes() == b"precious existing data"
     assert plans[0].src.exists()  # source untouched
+
+
+def test_sidecar_written_next_to_filed_image(conn, cfg, tmp_path):
+    import yaml
+
+    sid, fids = _setup_session(conn, cfg, tmp_path, n=1)
+    plans = plan_moves(conn, sid, cfg)
+    execute_plans(conn, plans)
+    sidecar = plans[0].dst.with_name(plans[0].dst.name + ".yaml")
+    assert sidecar.exists()
+    doc = yaml.safe_load(sidecar.read_text(encoding="utf-8"))
+    assert doc["file"] == plans[0].dst.name
+    assert doc["original_name"] == "Image 0.czi"
+    assert doc["user"] == "Tim de Wet (TdW)"
+    assert doc["biological"]["strain"] == "MSM155"
+    assert doc["biological"]["experiment"] == "efflux-timelapse"
+    # empty imaging fields are pruned, not written as null
+    assert "imaging" not in doc or None not in doc["imaging"].values()

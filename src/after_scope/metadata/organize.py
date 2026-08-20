@@ -1,12 +1,21 @@
-"""Plan and execute standardized renames/moves (copy → verify → delete, audited)."""
+"""Plan and execute standardized renames/moves (copy → verify → delete, audited).
+
+Every filed image gets a human-readable YAML sidecar (<name>.czi.yaml) next to
+it: biological details as declared, imaging details as read from the CZI header,
+user and session context — so the file remains self-describing outside the
+catalog (best-effort; a sidecar failure never fails the move).
+"""
 
 from __future__ import annotations
 
+import json
 import logging
 import shutil
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
+
+import yaml
 
 from ..config import AppConfig
 from ..db import repo
@@ -116,11 +125,79 @@ def _execute_one(conn: sqlite3.Connection, plan: MovePlan) -> str:
         repo.record_move(conn, plan.file_id, str(plan.src), str(plan.dst), verified=True)
         if not was_dust:
             repo.set_file_status(conn, plan.file_id, "moved")
+            _write_sidecar_safely(conn, plan.file_id, plan.dst)
         return "moved"
     repo.record_move(conn, plan.file_id, str(plan.src), str(plan.dst), verified=True)
     if not was_dust:
         repo.set_file_status(conn, plan.file_id, "copied")
+        _write_sidecar_safely(conn, plan.file_id, plan.dst)
     return "copied"
+
+
+def _prune(value):
+    if isinstance(value, dict):
+        cleaned = {k: _prune(v) for k, v in value.items()}
+        return {k: v for k, v in cleaned.items() if v not in (None, {}, [])}
+    return value
+
+
+def write_sidecar(conn: sqlite3.Connection, file_id: int, dst: Path) -> Path | None:
+    """Write <dst>.yaml describing the filed image; returns the sidecar path."""
+    row = repo.get_file(conn, file_id)
+    if row is None:
+        return None
+    session = repo.get_session(conn, row["session_id"]) if row["session_id"] else None
+    user = repo.get_user(conn, row["user_id"]) if row["user_id"] else None
+    experiment = None
+    if row["experiment_id"]:
+        r = conn.execute(
+            "SELECT name FROM experiments WHERE id=?", (row["experiment_id"],)
+        ).fetchone()
+        experiment = r["name"] if r else None
+    channels = None
+    if row["channels_json"]:
+        channels = [c.get("name") for c in json.loads(row["channels_json"])]
+    dims = json.loads(row["dims_json"]) if row["dims_json"] else None
+    doc = _prune({
+        "file": dst.name,
+        "original_name": Path(row["original_path"]).name,
+        "acquired_at": row["acquired_at"],
+        "user": f"{user['full_name']} ({user['initials']})" if user else None,
+        "biological": {
+            "experiment": experiment,
+            "strain": row["strain"],
+            "condition": row["condition"],
+            "preparation": row["coverslip"],
+            "notes": row["notes"],
+        },
+        "imaging": {
+            "objective": row["objective_name"],
+            "magnification": row["magnification"],
+            "numerical_aperture": row["na"],
+            "immersion": row["immersion"],
+            "pixel_size_um": row["pixel_size_um"],
+            "channels": channels,
+            "dimensions": dims,
+        },
+        "session": {
+            "started": session["started_at"],
+            "machine": session["machine"],
+            "planned_imaging": session["planned_imaging"],
+        } if session else None,
+        "catalogued_by": "AfterScope",
+    })
+    sidecar = dst.with_name(dst.name + ".yaml")
+    sidecar.write_text(
+        yaml.safe_dump(doc, sort_keys=False, allow_unicode=True), encoding="utf-8"
+    )
+    return sidecar
+
+
+def _write_sidecar_safely(conn: sqlite3.Connection, file_id: int, dst: Path) -> None:
+    try:
+        write_sidecar(conn, file_id, dst)
+    except Exception:
+        log.warning("Sidecar write failed for %s", dst, exc_info=True)
 
 
 def undo_move(conn: sqlite3.Connection, move_id: int) -> bool:
